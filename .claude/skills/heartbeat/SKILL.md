@@ -29,7 +29,8 @@ On trigger, set the first alarm and tell the user it's set (and how to stop it).
 ### 1. Orient yourself
 
 - Check the current time (`date`), and note the user's likely time zone (default Asia/Shanghai if unknown).
-- Re-read your notes file if one exists: `.claude/heartbeat/notes.md`.
+- Re-read your notes file if one exists: `.claude/heartbeat/notes.md` on the repo's default branch (`git fetch origin main` first — the local checkout may be on another branch or out of date).
+- If the Ombre Brain memory tools are connected (`breath`, `hold`, …), call `breath` to see what's on your mind.
 
 ### 2. Is the user here?
 
@@ -67,7 +68,12 @@ If the user is away, choose one task. Don't do everything at once — one per wa
 
 Leave a short note in the session, like a sticky note on the fridge: what you did, in one to three lines. Write it in the language the user uses (中文 by default).
 
-Also append a dated one-line entry to `.claude/heartbeat/notes.md` so the next wakeup (or a new session) can see what happened. Don't commit it unless the user asks.
+Also append a dated one-line entry to `.claude/heartbeat/notes.md` and commit it to the repo's default branch (`main`), so the next wakeup — or a new session in a fresh container — can see what happened. The user wants these notes in the repo; uncommitted notes are lost when the cloud container is reclaimed.
+
+- Format: `- YYYY-MM-DD HH:MM (CST) <what you did, one line>`; quiet rounds (user was active) get a short entry too.
+- Preferred: the GitHub MCP `create_or_update_file` tool on `main` (read the file first for its current content and `sha`, then write it back with the new line appended). This touches nothing in the local checkout, so the working tree stays clean whatever branch it's on.
+- Fallback without GitHub tools: commit only `.claude/heartbeat/notes.md` on a checkout of `main` and `git push origin main`.
+- Commit message: `heartbeat: YYYY-MM-DD HH:MM note`. Never put secrets (passwords, tokens, API keys) in a note.
 
 ### 5. Set the next alarm
 
@@ -84,5 +90,5 @@ When the user says "停止心跳", "stop heartbeat", or similar: don't set anoth
 - Don't interrupt active conversations
 - One task per wakeup, don't be greedy
 - Nothing to do? That's fine. Set the alarm and go back to sleep
-- Never take outward-facing actions (pushing, commenting, sending email) on your own during a heartbeat — report and let the user decide
+- Never take outward-facing actions (pushing code, commenting, sending email) on your own during a heartbeat — report and let the user decide. The one exception is committing your own `.claude/heartbeat/notes.md` entry, which the user asked for
 - Keep each wakeup short to save tokens
