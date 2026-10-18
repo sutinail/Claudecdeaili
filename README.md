@@ -6,3 +6,4 @@
 ## Deploy
 
 - [`deploy/ombre-brain`](deploy/ombre-brain/README.md) — 在自有 VPS 上一键部署 [Ombre Brain](https://github.com/P0luz/Ombre-Brain) 长期记忆系统（Docker + Cloudflare Tunnel），给 Claude 接上跨会话记忆。
+- [`deploy/voice-card`](deploy/voice-card/README.md) — 语音条：用 ElevenLabs 合成 Lumi 的声音，在 claude.ai 对话里显示可播放的语音条卡片（带 OAuth 登录）。
