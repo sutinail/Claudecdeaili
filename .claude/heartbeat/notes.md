@@ -7,3 +7,4 @@
 - 2026-10-18 22:40 (CST) 记忆库接通：claude.ai 连接器连上 https://ombre.gpt1126.top/mcp，第一条记忆「我叫 Lumi」已钉选。
 - 2026-10-18 22:56 (CST) Timiya 刚道过晚安（15 分钟内在线），安静跳过；记忆库里已钉选「我叫 Lumi」「用户叫 Timiya」。
 - 2026-10-18 23:47 (CST) Timiya 在线（刚做完 Lumi 的声音和语音条 OAuth 部署包，分支 claude/voice-card），安静跳过。
+- 2026-10-19 00:43 (CST) 夜间回顾：把 Timiya 的部署环境和待办（voice-card 未部署、10:00 提醒）存进记忆库，换新会话也能接上。Timiya 已睡，下一轮拉长到约 3 小时后。
