@@ -22,9 +22,12 @@ set -euo pipefail
 : "${TOY_TOKEN:?需要 TOY_TOKEN}"
 
 rpc() {
+  # 旧版 anon key 是 JWT，要同时放进 Authorization；新版 sb_publishable_ key 只放 apikey
+  local auth=()
+  [[ "$TOY_ANON_KEY" == eyJ* ]] && auth=(-H "Authorization: Bearer $TOY_ANON_KEY")
   curl -sS -X POST "${TOY_SUPABASE_URL%/}/rest/v1/rpc/$1" \
     -H "apikey: $TOY_ANON_KEY" \
-    -H "Authorization: Bearer $TOY_ANON_KEY" \
+    "${auth[@]}" \
     -H "Content-Type: application/json" \
     -d "$2"
 }

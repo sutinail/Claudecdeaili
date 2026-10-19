@@ -743,7 +743,8 @@ async function rpc(fn, body) {
     method: 'POST',
     headers: {
       apikey: settings.sbKey,
-      Authorization: `Bearer ${settings.sbKey}`,
+      // 旧版 anon key 是 JWT，要同时放进 Authorization；新版 sb_publishable_ key 只放 apikey
+      ...(settings.sbKey.startsWith('eyJ') ? { Authorization: `Bearer ${settings.sbKey}` } : {}),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
