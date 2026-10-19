@@ -61,6 +61,7 @@ If the user is away, choose one task. Don't do everything at once — one per wa
 
 **Optional, only if connected**
 - Memory MCP: link audit / importance calibration (prefer missing links over wrong links; adjust importance conservatively, ±50 max)
+- Ears MCP (`list_voice_messages` / `listen`): if there's an unheard voice message, listen to it and leave a note responding to what was said and how it was said
 - Email MCP: scan new mail and flag anything important
 - Text games installed locally: play a round, brag about rare catches
 

@@ -142,24 +142,31 @@ if [ -d "$CF_DIR" ] && [ -f "$CF_DIR/cert.pem" ]; then
     log "把 $VOICE_DOMAIN 加进隧道 $TID"
     CF="$SUDO docker run --rm -v $CF_DIR:/home/nonroot/.cloudflared cloudflare/cloudflared:latest"
     $CF tunnel route dns "$TID" "$VOICE_DOMAIN" || log "（DNS 记录可能已存在，继续）"
-    OMBRE_HOST="$(grep -h '^  public_url:' /opt/ombre-brain/buckets/config.yaml 2>/dev/null | sed -E 's#.*https://([^"/]+).*#\1#' | head -1)"
-    OMBRE_HOST="${OMBRE_HOST:-ombre.gpt1126.top}"
-    $SUDO tee "$CF_DIR/config.yml" >/dev/null <<CFG
+    # 只增不删：已有 config.yml 就把本域名插进去，不动别的服务（比如耳朵）的条目
+    CFG="$CF_DIR/config.yml"
+    if ! $SUDO test -f "$CFG"; then
+      OMBRE_HOST="$(grep -h '^  public_url:' /opt/ombre-brain/buckets/config.yaml 2>/dev/null | sed -E 's#.*https://([^"/]+).*#\1#' | head -1)"
+      $SUDO tee "$CFG" >/dev/null <<CFGEOF
 tunnel: $TID
 credentials-file: /home/nonroot/.cloudflared/$TID.json
 ingress:
-  - hostname: $OMBRE_HOST
+  - hostname: ${OMBRE_HOST:-ombre.gpt1126.top}
     service: http://localhost:18001
-  - hostname: $VOICE_DOMAIN
-    service: http://localhost:$VOICE_PORT
   - service: http_status:404
-CFG
-    $SUDO chown 65532:65532 "$CF_DIR/config.yml"
+CFGEOF
+    fi
+    if ! $SUDO grep -q "hostname: $VOICE_DOMAIN\$" "$CFG"; then
+      $SUDO awk -v h="$VOICE_DOMAIN" -v p="$VOICE_PORT" \
+        '/^  - service: http_status:404/ && !d {print "  - hostname: " h; print "    service: http://localhost:" p; d=1} {print}' \
+        "$CFG" | $SUDO tee "$CFG.new" >/dev/null
+      $SUDO mv "$CFG.new" "$CFG"
+    fi
+    $SUDO chown 65532:65532 "$CFG"
     $SUDO docker rm -f cloudflared >/dev/null 2>&1 || true
     $SUDO docker run -d --name cloudflared --restart unless-stopped --network host \
       -v "$CF_DIR:/home/nonroot/.cloudflared" cloudflare/cloudflared:latest \
       tunnel --no-autoupdate --protocol http2 --config /home/nonroot/.cloudflared/config.yml run "$TID" >/dev/null
-    log "隧道已改为两个域名：$OMBRE_HOST 和 $VOICE_DOMAIN"
+    log "隧道现在转发：$($SUDO grep -h 'hostname:' "$CFG" | awk '{print $3}' | paste -sd' ')"
   fi
 else
   log "没找到 $CF_DIR/cert.pem，跳过隧道配置（需要自己把 $VOICE_DOMAIN 指到 127.0.0.1:$VOICE_PORT）"
