@@ -913,7 +913,7 @@ RUN pip install --no-cache-dir -i $PIP_INDEX "mcp>=1.9.0,<2" uvicorn python-mult
     "librosa>=0.10" matplotlib numpy "faster-whisper>=1.0"
 WORKDIR /app
 COPY ears_mcp.py /app/ears_mcp.py
-ENV EARS_DATA_DIR=/app/data WHISPER_MODEL_DIR=/app/models MPLCONFIGDIR=/tmp/mpl NUMBA_CACHE_DIR=/app/models/numba \\
+ENV HF_HUB_DISABLE_XET=1 EARS_DATA_DIR=/app/data WHISPER_MODEL_DIR=/app/models MPLCONFIGDIR=/tmp/mpl NUMBA_CACHE_DIR=/app/models/numba \\
     MCP_HOST=0.0.0.0 MCP_PORT=8000 PYTHONUNBUFFERED=1
 CMD ["python", "-I", "/app/ears_mcp.py"]
 DOCKERFILE
