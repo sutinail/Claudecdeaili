@@ -29,7 +29,7 @@ create table if not exists public.device_commands (
     device           text not null default 'toy',
 
     -- pulse 单通道
-    channel          text check (channel in ('vibration', 'suction')),
+    channel          text check (channel in ('vibration', 'suction', 'thrust')),
     pattern          text default 'steady' check (pattern in ('steady', 'pulse', 'wave', 'escalate')),
     intensity        smallint check (intensity between 0 and 100),
     duration_seconds numeric(5,1) check (duration_seconds > 0 and duration_seconds <= 600),
@@ -90,7 +90,7 @@ begin
     end if;
 
     for k, v in select * from jsonb_each(p_channels) loop
-        if k not in ('vibration', 'suction') then
+        if k not in ('vibration', 'suction', 'thrust') then
             raise exception '未知 channel: %', k;
         end if;
         if jsonb_typeof(v) <> 'object' then

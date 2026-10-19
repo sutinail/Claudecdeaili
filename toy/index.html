@@ -202,9 +202,12 @@ const PRESETS = {
     // 官方 App 连接时还会先发 55 04 00 00 00 ff aa，那是让设备「滋滋」动一下表示已连接，这里省略
     init: ['55 02 00 00 00 00 00', '55 04 00 00 00 00 aa'],
     multi: true,  // 吸吮蛋和震动棒是两台同名 SL278B，都连上；震动棒不响应 55 09，吸吮蛋不响应 55 03
+    keepalive: false,  // 设备会保持最后一条指令，官方 App 也不重发；重发还会让花样从头开始
+    // 格式 55 <功能> 00 00 <模式> <强度> 00：震动模式 1-10、吸吮模式 1-5，模式 1 为持续；伸缩只有花样 1-7
     channels: {
       vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v} 00' },
       suction:   { label: '吸吮', max: 10, frame: '55 09 00 00 {on} {v} 00' },
+      thrust:    { label: '伸缩花样', max: 7, frame: '55 08 00 00 {v} 00 00', steadyOnly: true },
     },
   },
   'svakom-pulse': {
@@ -290,7 +293,7 @@ const EXTRA_SERVICES = [
 ];
 
 const PATTERNS = { steady: '持续', pulse: '脉冲', wave: '波浪', escalate: '渐强' };
-const KNOWN_CHANNELS = ['vibration', 'suction'];
+const KNOWN_CHANNELS = ['vibration', 'suction', 'thrust'];
 
 // ---------------------------------------------------------------------------
 // 小工具
@@ -539,6 +542,8 @@ const manager = {
 
   start(name, { pattern = 'steady', intensity, duration_seconds }) {
     const c = this.ch[name];
+    // 伸缩这类只有固定花样的通道，强度直接选花样编号，不叠加脉冲 / 波浪
+    if (currentAdapter().channels[name].steadyOnly) pattern = 'steady';
     const capped = Math.min(intensity, settings.capInt);
     const dur = Math.min(duration_seconds, settings.capDur);
     Object.assign(c, {
@@ -583,7 +588,7 @@ const manager = {
     const c = this.ch[name];
     const t = now();
     // 部分 Svakom 需要定期重复最后一帧，否则会自己停
-    if (!force && step === c.lastStep && t - c.lastSentAt < 1000) return;
+    if (!force && step === c.lastStep && (currentAdapter().keepalive === false || t - c.lastSentAt < 1000)) return;
     c.lastStep = step;
     c.lastSentAt = t;
     if (!ble.connected) return;
