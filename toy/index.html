@@ -194,12 +194,15 @@ const FFE1 = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
 const PRESETS = {
   'svakom-sl278b': {
-    label: 'Svakom SL278B（分体款 / Fatima Pro，已验证协议）',
+    // 来自官方 App 的 HCI 抓包：先订阅 FFE2 通知并握手，指令为 7 字节
+    label: 'Svakom SL278B（分欣分体款，抓包验证）',
     service: FFE0, tx: FFE1, withResponse: false,
     names: ['SL278B'],
+    notify: '0000ffe2-0000-1000-8000-00805f9b34fb',
+    init: ['55 04 00 00 00 ff aa', '55 02 00 00 00 00 00', '55 04 00 00 00 00 aa'],
     channels: {
-      vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v}' },
-      suction:   { label: '吸吮', max: 10, frame: '55 09 00 00 {on} {v}' },
+      vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v} 00' },
+      suction:   { label: '吸吮', max: 10, frame: '55 09 00 00 {on} {v} 00' },
     },
   },
   'svakom-pulse': {
@@ -424,6 +427,20 @@ const ble = {
     const svc = await this.server.getPrimaryService(a.service);
     this.tx = await svc.getCharacteristic(a.tx);
     bleLog(`已连接，TX = ${a.tx}`);
+    if (a.notify) {
+      try {
+        const rx = await svc.getCharacteristic(a.notify);
+        rx.addEventListener('characteristicvaluechanged', (ev) => bleLog(`设备回复: ${hex(new Uint8Array(ev.target.value.buffer))}`));
+        await rx.startNotifications();
+      } catch (e) {
+        bleLog('订阅通知失败：' + e.message);
+      }
+    }
+    for (const frame of a.init || []) {
+      await this.write(buildFrame(frame, 0));
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    if (a.init) bleLog('握手已发送');
     onConnected();
   },
 
