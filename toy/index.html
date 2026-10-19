@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c9785a">
+<title>Toy Bridge</title>
+<style>
+  :root {
+    --bg: #faf5f0;
+    --card: #ffffff;
+    --ink: #3b2f2a;
+    --muted: #8a7a72;
+    --accent: #c9785a;
+    --accent-soft: #f6e3d8;
+    --line: #eadfd6;
+    --ok: #4f9a6b;
+    --warn: #d08a2c;
+    --bad: #c4473a;
+    --stop: #c4473a;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1d1916;
+      --card: #28221e;
+      --ink: #f1e7df;
+      --muted: #a8988e;
+      --accent: #e0916f;
+      --accent-soft: #3a2c25;
+      --line: #3a312b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    padding: 16px 16px calc(110px + env(safe-area-inset-bottom));
+    max-width: 560px; margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 { font-size: 22px; margin: 4px 0 2px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pill { font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--card); border: 1px solid var(--line); }
+  .pill::before { content: "●"; margin-right: 6px; color: var(--muted); }
+  .pill.ok::before { color: var(--ok); }
+  .pill.warn::before { color: var(--warn); }
+  .pill.bad::before { color: var(--bad); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  details.card > summary { font-weight: 600; cursor: pointer; list-style: none; }
+  details.card > summary::after { content: "＋"; float: right; color: var(--muted); }
+  details.card[open] > summary::after { content: "－"; }
+  details.card[open] > summary { margin-bottom: 10px; }
+  button {
+    font: inherit; border: 0; border-radius: 12px; padding: 10px 14px;
+    background: var(--accent-soft); color: var(--ink); cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .45; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row > * { flex: 1 1 auto; }
+  label.f { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+  }
+  textarea { font-family: var(--mono); font-size: 12px; min-height: 120px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .ch { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  .ch:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+  .ch-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .ch-name { font-weight: 600; }
+  .ch-val { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .meter { height: 6px; border-radius: 3px; background: var(--accent-soft); overflow: hidden; margin: 6px 0 4px; }
+  .meter > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+  .switch input { width: 46px; height: 26px; accent-color: var(--accent); }
+  .log { font-family: var(--mono); font-size: 11.5px; max-height: 220px; overflow: auto; background: var(--bg); border-radius: 10px; padding: 8px; white-space: pre-wrap; word-break: break-all; }
+  .log div { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  .warnbox { font-size: 12.5px; background: var(--accent-soft); border-radius: 10px; padding: 8px 10px; margin-top: 8px; }
+  .svc { font-family: var(--mono); font-size: 11.5px; }
+  .svc button { padding: 2px 8px; font-size: 11px; border-radius: 8px; margin-left: 6px; }
+  #stopBar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(transparent, var(--bg) 30%);
+  }
+  #stopBtn {
+    display: block; width: 100%; max-width: 528px; margin: 0 auto;
+    background: var(--stop); color: #fff; font-size: 20px; font-weight: 700;
+    padding: 16px; border-radius: 18px; letter-spacing: 4px;
+    box-shadow: 0 6px 20px rgba(196, 71, 58, .35);
+  }
+</style>
+</head>
+<body>
+
+<h1>Toy Bridge</h1>
+<div class="sub">手机做桥：AI → Supabase → 这个页面 → 蓝牙 → Toy</div>
+
+<div class="pills">
+  <span id="pillBle" class="pill bad">蓝牙未连接</span>
+  <span id="pillAi" class="pill">AI 联动关闭</span>
+</div>
+
+<!-- 连接 -->
+<section class="card">
+  <h2>连接</h2>
+  <label class="f">协议预设（连接后会按设备名自动匹配）</label>
+  <select id="presetSel"></select>
+  <div class="row" style="margin-top:10px">
+    <button id="connectBtn" class="primary">连接 Toy</button>
+    <button id="disconnectBtn" disabled>断开</button>
+  </div>
+  <p id="devInfo" class="hint">需要在 Bluefy 浏览器里打开本页。</p>
+  <div id="presetNote" class="warnbox" hidden></div>
+</section>
+
+<!-- 手动控制 -->
+<section class="card">
+  <h2>手动控制</h2>
+  <div id="channels"></div>
+  <p class="hint">拖动滑块即开始，松到 0 即停。手动时长 = 设置里的「单次最长时间」。</p>
+</section>
+
+<!-- AI 联动 -->
+<section class="card">
+  <h2>AI 联动</h2>
+  <div class="switch">
+    <span>接收 AI 指令（每秒查一次信箱）</span>
+    <input id="aiToggle" type="checkbox">
+  </div>
+  <div id="aiLog" class="log"><div>还没有指令</div></div>
+</section>
+
+<!-- 设置 -->
+<details class="card" id="settingsCard">
+  <summary>设置</summary>
+  <label class="f">Supabase Project URL</label>
+  <input id="sbUrl" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off">
+  <label class="f">Supabase anon key（publishable key）</label>
+  <input id="sbKey" type="password" autocomplete="off">
+  <label class="f">Bridge token（和 SQL 里设置的那串一样）</label>
+  <input id="sbToken" type="password" autocomplete="off">
+
+  <label class="f">强度上限：<b id="capIntVal">60</b>%（AI 和手动都会被压到这个值以下）</label>
+  <input id="capInt" type="range" min="5" max="100" step="5" value="60">
+  <label class="f">单次最长时间（秒）</label>
+  <input id="capDur" type="number" min="5" max="600" value="120">
+
+  <div class="switch">
+    <span>页面切到后台 / 锁屏时自动全部停止</span>
+    <input id="stopOnHide" type="checkbox" checked>
+  </div>
+
+  <label class="f">自定义协议（JSON，预设选「自定义」时生效）</label>
+  <textarea id="customJson" spellcheck="false"></textarea>
+  <p class="hint">frame 写法：十六进制字节用空格隔开；<code>{v}</code> 档位值，<code>{v+1}</code> 档位+1，<code>{on}</code> 有强度时为 01 否则 00，<code>{on:05}</code> 有强度时为 05。</p>
+  <div class="row" style="margin-top:10px">
+    <button id="saveBtn" class="primary">保存设置</button>
+  </div>
+  <p class="hint">设置只保存在这台手机的浏览器里，不会上传。</p>
+</details>
+
+<!-- 调试 -->
+<details class="card">
+  <summary>调试 / 找协议</summary>
+  <div class="row">
+    <button id="scanSvcBtn">列出服务和特征</button>
+  </div>
+  <div id="svcList" class="svc" style="margin-top:8px"></div>
+  <label class="f">手动发送十六进制（写入当前 TX 特征）</label>
+  <div class="row">
+    <input id="hexIn" type="text" placeholder="55 03 00 00 01 05 00" style="flex:3">
+    <button id="hexBtn" style="flex:1">发送</button>
+  </div>
+  <label class="f">底层日志</label>
+  <div id="bleLog" class="log"></div>
+</details>
+
+<div id="stopBar"><button id="stopBtn">停 止</button></div>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------------------
+// 协议预设：Svakom 系列来自 buttplug.io 开源设备库（BSD-3），全部走 ffe0/ffe1
+// ---------------------------------------------------------------------------
+const FFE0 = '0000ffe0-0000-1000-8000-00805f9b34fb';
+const FFE1 = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+const PRESETS = {
+  'svakom-pulse': {
+    label: 'Svakom Pulse 系（Pulse Union / Galaxie / Lite Neo…）',
+    service: FFE0, tx: FFE1, withResponse: false,
+    names: ['SWK-SX013A', 'Pulse Union', 'Pulse Galaxie', 'SX033APP', 'SX033A', 'BX288A', 'QH-SX045A-B', 'SWK-SX067-B', 'QH-HX029A-B', 'HX013H'],
+    channels: { suction: { label: '吸吮', max: 9, frame: '55 03 03 00 {on} {v+1}' } },
+  },
+  'svakom-sam2': {
+    label: 'Svakom Sam Neo 2 系（震动 + 吸吮）',
+    service: FFE0, tx: FFE1, withResponse: true,
+    names: ['Sam Neo 2', 'Sam Neo 2 Pro'],
+    channels: {
+      vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on:05} {v} 00' },
+      suction:   { label: '吸吮', max: 5,  frame: '55 09 00 00 {on} {v} 00' },
+    },
+  },
+  'svakom-v6': {
+    label: 'Svakom v6 系（Coco Pro / Echo 2 / Vick Neo 2 / Iker Neo…）',
+    service: FFE0, tx: FFE1, withResponse: false,
+    names: ['CocoPro', 'Echo 2', 'Vick Neo 2', 'Iker Neo', 'VA617A-3', 'VA617A-4', 'ST462A'],
+    channels: { vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v} 00' } },
+  },
+  'guess-split-a': {
+    label: '分体吸震 · 猜测 A（v6 风格，未验证）',
+    service: FFE0, tx: FFE1, withResponse: false, guess: true, names: [],
+    channels: {
+      vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v} 00' },
+      suction:   { label: '吸吮', max: 5,  frame: '55 09 00 00 {v} 00 00' },
+    },
+  },
+  'guess-split-b': {
+    label: '分体吸震 · 猜测 B（Sam 风格，未验证）',
+    service: FFE0, tx: FFE1, withResponse: true, guess: true, names: [],
+    channels: {
+      vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on:05} {v} 00' },
+      suction:   { label: '吸吮', max: 5,  frame: '55 09 00 00 {on} {v} 00' },
+    },
+  },
+  'svakom-v3': {
+    label: 'Svakom v3 系（Phoenix Neo 2 / Hannes Neo…）',
+    service: FFE0, tx: FFE1, withResponse: false,
+    names: ['Phoenix Neo 2', 'FK008A', 'Hannes NEO', 'QH-SX007E'],
+    channels: {
+      vibration:  { label: '震动', max: 10, frame: '55 03 03 00 {on} {v}' },
+      suction:    { label: '第二马达', max: 10, frame: '55 09 00 00 {on} {v}' },
+    },
+  },
+  'svakom-v2': {
+    label: 'Svakom v2 系（Ella Neo / Vick Neo / Cici 2 / Emma Neo 2…）',
+    service: FFE0, tx: FFE1, withResponse: true,
+    names: ['116', '117', '118', 'Edeny', 'Viviana', 'Ella NEO', 'S38A', 'Vick NEO', 'Vick Neo', 'STG05A', 'QH-SJ007A', 'Cici 2', 'Emma Neo 2'],
+    channels: { vibration: { label: '震动', max: 10, frame: '55 03 03 00 {on} {v}' } },
+  },
+  'svakom-v1': {
+    label: 'Svakom v1 系（Emma Neo / Phoenix Neo / Aogu…）',
+    service: FFE0, tx: FFE1, withResponse: false,
+    names: ['Aogu SUV', 'Aogu SCB', 'Emma NEO', 'Emma Neo', 'Phoenix NEO'],
+    channels: { vibration: { label: '震动', max: 19, frame: '55 04 03 00 {on} {v}' } },
+  },
+  'custom': { label: '自定义（用设置里的 JSON）' },
+};
+
+const DEFAULT_CUSTOM = {
+  label: '我的 Toy',
+  service: FFE0,
+  tx: FFE1,
+  withResponse: false,
+  channels: {
+    vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v} 00' },
+    suction: { label: '吸吮', max: 5, frame: '55 09 00 00 {v} 00 00' },
+  },
+};
+
+// Bluefy / Web Bluetooth 只能访问 optionalServices 里列出的服务
+const EXTRA_SERVICES = [
+  FFE0,
+  '0000fff0-0000-1000-8000-00805f9b34fb',
+  '0000ffe5-0000-1000-8000-00805f9b34fb',
+  '0000ff00-0000-1000-8000-00805f9b34fb',
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+  '0000180f-0000-1000-8000-00805f9b34fb',
+];
+
+const PATTERNS = { steady: '持续', pulse: '脉冲', wave: '波浪', escalate: '渐强' };
+const KNOWN_CHANNELS = ['vibration', 'suction'];
+
+// ---------------------------------------------------------------------------
+// 小工具
+// ---------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('toybridge.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('toybridge.' + k, JSON.stringify(v)); } catch { /* 私密模式等 */ } },
+};
+const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const now = () => Date.now();
+const timeStr = () => new Date().toTimeString().slice(0, 8);
+
+function logTo(el, text, max = 80) {
+  if (el.dataset.empty !== 'no') { el.textContent = ''; el.dataset.empty = 'no'; }
+  const d = document.createElement('div');
+  d.textContent = `${timeStr()}  ${text}`;
+  el.prepend(d);
+  while (el.childNodes.length > max) el.lastChild.remove();
+}
+const bleLog = (t) => logTo($('bleLog'), t);
+const aiLog = (t) => logTo($('aiLog'), t, 40);
+
+function setPill(id, cls, text) {
+  const el = $(id);
+  el.className = 'pill ' + cls;
+  el.textContent = text;
+}
+
+// frame 模板 → 字节
+function buildFrame(template, step) {
+  return Uint8Array.from(template.trim().split(/\s+/), (tok) => {
+    let m;
+    if (tok === '{v}') return step & 0xff;
+    if ((m = tok.match(/^\{v\+(\d+)\}$/))) return (step + Number(m[1])) & 0xff;
+    if (tok === '{on}') return step > 0 ? 1 : 0;
+    if ((m = tok.match(/^\{on:([0-9a-fA-F]{2})\}$/))) return step > 0 ? parseInt(m[1], 16) : 0;
+    if (/^[0-9a-fA-F]{2}$/.test(tok)) return parseInt(tok, 16);
+    throw new Error('frame 里有看不懂的片段: ' + tok);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 设置
+// ---------------------------------------------------------------------------
+const settings = {
+  presetId: store.get('presetId', 'guess-split-a'),
+  sbUrl: store.get('sbUrl', ''),
+  sbKey: store.get('sbKey', ''),
+  sbToken: store.get('sbToken', ''),
+  capInt: store.get('capInt', 60),
+  capDur: store.get('capDur', 120),
+  stopOnHide: store.get('stopOnHide', true),
+  customJson: store.get('customJson', JSON.stringify(DEFAULT_CUSTOM, null, 2)),
+};
+
+function currentAdapter() {
+  if (settings.presetId === 'custom') {
+    try { return JSON.parse(settings.customJson); } catch { return DEFAULT_CUSTOM; }
+  }
+  return PRESETS[settings.presetId] || PRESETS['guess-split-a'];
+}
+
+function fillSettingsForm() {
+  $('sbUrl').value = settings.sbUrl;
+  $('sbKey').value = settings.sbKey;
+  $('sbToken').value = settings.sbToken;
+  $('capInt').value = settings.capInt;
+  $('capIntVal').textContent = settings.capInt;
+  $('capDur').value = settings.capDur;
+  $('stopOnHide').checked = settings.stopOnHide;
+  $('customJson').value = settings.customJson;
+}
+
+function saveSettings() {
+  const customJson = $('customJson').value;
+  if (settings.presetId === 'custom') {
+    try { validateAdapter(JSON.parse(customJson)); }
+    catch (e) { alert('自定义 JSON 有问题：' + e.message); return; }
+  }
+  Object.assign(settings, {
+    sbUrl: $('sbUrl').value.trim().replace(/\/+$/, ''),
+    sbKey: $('sbKey').value.trim(),
+    sbToken: $('sbToken').value.trim(),
+    capInt: Number($('capInt').value),
+    capDur: clamp(Number($('capDur').value) || 120, 5, 600),
+    stopOnHide: $('stopOnHide').checked,
+    customJson,
+  });
+  for (const k of Object.keys(settings)) store.set(k, settings[k]);
+  fillSettingsForm();
+  renderChannels();
+  aiLog('设置已保存');
+}
+
+function validateAdapter(a) {
+  if (!a.service || !a.tx) throw new Error('缺少 service / tx');
+  if (!a.channels || !Object.keys(a.channels).length) throw new Error('缺少 channels');
+  for (const [name, c] of Object.entries(a.channels)) {
+    if (!KNOWN_CHANNELS.includes(name)) throw new Error(`channel 名只能是 ${KNOWN_CHANNELS.join(' / ')}`);
+    if (!(c.max > 0)) throw new Error(`${name}.max 必须大于 0`);
+    buildFrame(c.frame, 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 蓝牙层：串行写入，同一通道只保留最新一帧
+// ---------------------------------------------------------------------------
+const ble = {
+  device: null,
+  server: null,
+  tx: null,
+  pending: new Map(),   // channel -> Uint8Array
+  draining: false,
+
+  get connected() { return !!(this.server && this.server.connected && this.tx); },
+
+  async connect() {
+    if (!navigator.bluetooth) {
+      alert('这个浏览器不支持 Web Bluetooth。iPhone 上请用 Bluefy 打开本页。');
+      return;
+    }
+    const custom = currentAdapter();
+    const optionalServices = Array.from(new Set([...EXTRA_SERVICES, custom.service].filter(Boolean)));
+    this.device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices });
+    this.device.addEventListener('gattserverdisconnected', () => onDisconnected());
+    bleLog(`选择设备：${this.device.name || '(无名称)'}`);
+    await this.open();
+  },
+
+  async open() {
+    this.server = await this.device.gatt.connect();
+    autoPickPreset(this.device.name || '');
+    const a = currentAdapter();
+    const svc = await this.server.getPrimaryService(a.service);
+    this.tx = await svc.getCharacteristic(a.tx);
+    bleLog(`已连接，TX = ${a.tx}`);
+    onConnected();
+  },
+
+  disconnect() {
+    if (this.device && this.device.gatt.connected) this.device.gatt.disconnect();
+  },
+
+  queue(channel, bytes) {
+    this.pending.set(channel, bytes);
+    this.drain();
+  },
+
+  async drain() {
+    if (this.draining) return;
+    this.draining = true;
+    try {
+      while (this.pending.size && this.connected) {
+        const [channel, bytes] = this.pending.entries().next().value;
+        this.pending.delete(channel);
+        await this.write(bytes);
+      }
+    } finally {
+      this.draining = false;
+    }
+  },
+
+  async write(bytes) {
+    const a = currentAdapter();
+    try {
+      if (!a.withResponse && this.tx.writeValueWithoutResponse) await this.tx.writeValueWithoutResponse(bytes);
+      else if (this.tx.writeValueWithResponse) await this.tx.writeValueWithResponse(bytes);
+      else await this.tx.writeValue(bytes);
+    } catch (e) {
+      bleLog(`写入失败 ${hex(bytes)}：${e.message}`);
+    }
+  },
+};
+
+function autoPickPreset(name) {
+  const lower = name.toLowerCase();
+  for (const [id, p] of Object.entries(PRESETS)) {
+    if (p.names && p.names.some((n) => lower === n.toLowerCase() || lower.startsWith(n.toLowerCase()))) {
+      if (settings.presetId !== id) {
+        settings.presetId = id;
+        store.set('presetId', id);
+        $('presetSel').value = id;
+        renderChannels();
+      }
+      bleLog(`按设备名匹配到预设：${p.label}`);
+      return;
+    }
+  }
+  bleLog('设备名不在已知列表里，沿用当前选择的预设');
+}
+
+// ---------------------------------------------------------------------------
+// 设备管理层：每个通道独立的强度 / 模式 / 结束时间 / generation
+// ---------------------------------------------------------------------------
+const manager = {
+  ch: {},          // name -> state
+  ticker: null,
+
+  reset() {
+    this.ch = {};
+    for (const name of Object.keys(currentAdapter().channels || {})) {
+      this.ch[name] = { active: false, pattern: 'steady', intensity: 0, startedAt: 0, stopAt: 0, gen: 0, lastStep: -1, lastSentAt: 0 };
+    }
+  },
+
+  start(name, { pattern = 'steady', intensity, duration_seconds }) {
+    const c = this.ch[name];
+    const capped = Math.min(intensity, settings.capInt);
+    const dur = Math.min(duration_seconds, settings.capDur);
+    Object.assign(c, {
+      active: capped > 0, pattern, intensity: capped,
+      startedAt: now(), stopAt: now() + dur * 1000, gen: c.gen + 1,
+    });
+    this.ensureTicker();
+    this.tick();
+    return { intensity_applied: capped, duration_applied: dur, expected_stop_at: new Date(c.stopAt).toISOString(), generation: c.gen };
+  },
+
+  stop(name) {
+    const names = name ? [name] : Object.keys(this.ch);
+    for (const n of names) {
+      const c = this.ch[n];
+      if (!c) continue;
+      Object.assign(c, { active: false, intensity: 0, gen: c.gen + 1 });
+      this.send(n, 0, true);
+    }
+    renderMeters();
+  },
+
+  levelAt(c, t) {
+    if (!c.active) return 0;
+    const I = c.intensity;
+    const el = t - c.startedAt;
+    switch (c.pattern) {
+      case 'pulse': return el % 2000 < 1000 ? I : 0;
+      case 'wave': return I * (0.55 + 0.45 * Math.sin((2 * Math.PI * el) / 4000));
+      case 'escalate': return I * clamp(el / Math.max(1, c.stopAt - c.startedAt), 0.1, 1);
+      default: return I;
+    }
+  },
+
+  stepFor(name, level) {
+    const max = currentAdapter().channels[name].max;
+    if (level <= 0) return 0;
+    return clamp(Math.round((level / 100) * max), 1, max);
+  },
+
+  send(name, step, force = false) {
+    const c = this.ch[name];
+    const t = now();
+    // 部分 Svakom 需要定期重复最后一帧，否则会自己停
+    if (!force && step === c.lastStep && t - c.lastSentAt < 1000) return;
+    c.lastStep = step;
+    c.lastSentAt = t;
+    if (!ble.connected) return;
+    try {
+      ble.queue(name, buildFrame(currentAdapter().channels[name].frame, step));
+    } catch (e) {
+      bleLog(e.message);
+    }
+  },
+
+  tick() {
+    const t = now();
+    let anyActive = false;
+    for (const [name, c] of Object.entries(this.ch)) {
+      if (c.active && t >= c.stopAt) {
+        Object.assign(c, { active: false, intensity: 0 });
+        this.send(name, 0, true);
+        syncSlider(name);
+        continue;
+      }
+      if (c.active) anyActive = true;
+      if (c.active || c.lastStep !== 0) this.send(name, this.stepFor(name, this.levelAt(c, t)));
+    }
+    renderMeters();
+    if (!anyActive) this.stopTicker();
+  },
+
+  ensureTicker() { if (!this.ticker) this.ticker = setInterval(() => this.tick(), 200); },
+  stopTicker() { clearInterval(this.ticker); this.ticker = null; },
+
+  status() {
+    const out = {};
+    for (const [name, c] of Object.entries(this.ch)) {
+      out[name] = c.active
+        ? { active: true, pattern: c.pattern, intensity: c.intensity, generation: c.gen, expected_stop_at: new Date(c.stopAt).toISOString() }
+        : { active: false, intensity: 0 };
+    }
+    return { connected: ble.connected, device_name: ble.device?.name || null, preset: settings.presetId, caps: { intensity: settings.capInt, duration_seconds: settings.capDur }, channels: out };
+  },
+};
+
+function stopAll(reason) {
+  manager.stop();
+  for (const name of Object.keys(manager.ch)) syncSlider(name);
+  if (reason) aiLog(`全部停止（${reason}）`);
+}
+
+// ---------------------------------------------------------------------------
+// UI：通道卡片
+// ---------------------------------------------------------------------------
+function renderPresetSelect() {
+  const sel = $('presetSel');
+  sel.innerHTML = '';
+  for (const [id, p] of Object.entries(PRESETS)) {
+    const o = document.createElement('option');
+    o.value = id;
+    o.textContent = p.label;
+    sel.append(o);
+  }
+  sel.value = settings.presetId;
+}
+
+function renderChannels() {
+  stopAll();
+  manager.reset();
+  const a = currentAdapter();
+  const box = $('channels');
+  box.innerHTML = '';
+  for (const [name, c] of Object.entries(a.channels || {})) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ch';
+    wrap.innerHTML = `
+      <div class="ch-head"><span class="ch-name"></span><span class="ch-val" id="val-${name}">0%</span></div>
+      <div class="meter"><i id="meter-${name}"></i></div>
+      <input type="range" min="0" max="100" step="5" value="0" id="slider-${name}">
+      <select id="pattern-${name}"></select>`;
+    wrap.querySelector('.ch-name').textContent = `${c.label || name}（${name}，${c.max} 档）`;
+    box.append(wrap);
+    const ps = wrap.querySelector('select');
+    for (const [pid, plabel] of Object.entries(PATTERNS)) {
+      const o = document.createElement('option'); o.value = pid; o.textContent = plabel; ps.append(o);
+    }
+    const slider = wrap.querySelector('input');
+    const apply = () => {
+      const v = Number(slider.value);
+      if (v === 0) manager.stop(name);
+      else manager.start(name, { pattern: ps.value, intensity: v, duration_seconds: settings.capDur });
+      $('val-' + name).textContent = `${v}%`;
+    };
+    slider.addEventListener('input', apply);
+    ps.addEventListener('change', () => { if (Number(slider.value) > 0) apply(); });
+  }
+  const note = $('presetNote');
+  note.hidden = !a.guess;
+  note.textContent = a.guess
+    ? '这是根据同品牌其他型号推测的协议，还没在你的设备上验证过。先把强度上限调低，从 10% 试起；没反应就换另一个猜测，或去「调试」里找协议。'
+    : '';
+  renderMeters();
+}
+
+function syncSlider(name) {
+  const s = $('slider-' + name);
+  const c = manager.ch[name];
+  if (!s || !c) return;
+  s.value = c.active ? c.intensity : 0;
+  $('pattern-' + name).value = c.pattern;
+  $('val-' + name).textContent = `${s.value}%`;
+}
+
+function renderMeters() {
+  const t = now();
+  for (const [name, c] of Object.entries(manager.ch)) {
+    const m = $('meter-' + name);
+    if (m) m.style.width = `${manager.levelAt(c, t)}%`;
+  }
+}
+
+function onConnected() {
+  setPill('pillBle', 'ok', `已连接 ${ble.device.name || ''}`);
+  $('devInfo').textContent = `设备名：${ble.device.name || '(无名称)'} · 预设：${currentAdapter().label}`;
+  $('connectBtn').textContent = '重新连接';
+  $('disconnectBtn').disabled = false;
+}
+
+function onDisconnected() {
+  for (const c of Object.values(manager.ch)) Object.assign(c, { active: false, intensity: 0, lastStep: -1 });
+  for (const name of Object.keys(manager.ch)) syncSlider(name);
+  ble.pending.clear();
+  ble.tx = null;
+  setPill('pillBle', 'bad', '蓝牙已断开');
+  $('disconnectBtn').disabled = true;
+  bleLog('设备断开');
+  aiLog('蓝牙断开，所有通道已清零');
+}
+
+// ---------------------------------------------------------------------------
+// AI 联动：轮询 Supabase 信箱
+// ---------------------------------------------------------------------------
+const ai = { on: false, timer: null, busy: false, failures: 0 };
+
+async function rpc(fn, body) {
+  const res = await fetch(`${settings.sbUrl}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: {
+      apikey: settings.sbKey,
+      Authorization: `Bearer ${settings.sbKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error((data && (data.message || data.hint)) || `HTTP ${res.status}`);
+  return data;
+}
+
+function setAi(on) {
+  if (on && !(settings.sbUrl && settings.sbKey && settings.sbToken)) {
+    alert('先在「设置」里填好 Supabase URL、anon key 和 bridge token');
+    $('aiToggle').checked = false;
+    return;
+  }
+  ai.on = on;
+  clearTimeout(ai.timer);
+  if (on) { ai.failures = 0; setPill('pillAi', 'warn', 'AI 联动：连接中'); poll(); }
+  else setPill('pillAi', '', 'AI 联动关闭');
+}
+
+async function poll() {
+  if (!ai.on) return;
+  let delay = 1000;
+  try {
+    const rows = await rpc('toy_claim_next', { p_token: settings.sbToken });
+    ai.failures = 0;
+    setPill('pillAi', 'ok', 'AI 联动：在线');
+    if (rows && rows.length) await handleCommand(rows[0]);
+  } catch (e) {
+    ai.failures += 1;
+    setPill('pillAi', 'bad', 'AI 联动：出错');
+    if (ai.failures === 1 || ai.failures % 10 === 0) aiLog(`信箱出错：${e.message}`);
+    delay = Math.min(10000, 1000 * 2 ** Math.min(ai.failures, 4));
+  }
+  if (ai.on) ai.timer = setTimeout(poll, delay);
+}
+
+class Invalid extends Error {}
+
+function checkChannelSpec(name, spec) {
+  const a = currentAdapter();
+  if (!a.channels[name]) throw new Invalid(`这台设备没有 ${name} 通道`);
+  const pattern = spec.pattern || 'steady';
+  if (!PATTERNS[pattern]) throw new Invalid(`不支持的 pattern: ${pattern}`);
+  const intensity = Number(spec.intensity);
+  const duration = Number(spec.duration_seconds);
+  if (!(intensity >= 0 && intensity <= 100)) throw new Invalid('intensity 必须在 0-100');
+  if (!(duration > 0 && duration <= 600)) throw new Invalid('duration_seconds 必须在 0-600');
+  return { pattern, intensity, duration_seconds: duration };
+}
+
+async function handleCommand(cmd) {
+  const tag = `${cmd.action}${cmd.channel ? ' ' + cmd.channel : ''}`;
+  let state = 'done';
+  let result;
+  try {
+    if (cmd.action === 'status') {
+      result = manager.status();
+    } else if (!ble.connected) {
+      throw new Error('蓝牙设备未连接');
+    } else if (cmd.action === 'stop') {
+      if (cmd.channel && !manager.ch[cmd.channel]) throw new Invalid(`这台设备没有 ${cmd.channel} 通道`);
+      if (cmd.channel) manager.stop(cmd.channel); else stopAll();
+      if (cmd.channel) syncSlider(cmd.channel);
+      result = { stopped: cmd.channel || 'all' };
+    } else if (cmd.action === 'pulse') {
+      const spec = checkChannelSpec(cmd.channel, cmd);
+      result = { [cmd.channel]: manager.start(cmd.channel, spec) };
+      syncSlider(cmd.channel);
+    } else if (cmd.action === 'combo') {
+      const ch = cmd.channels || {};
+      if (!Object.keys(ch).length) throw new Invalid('combo 没有 channels');
+      const specs = Object.entries(ch).map(([n, s]) => [n, checkChannelSpec(n, s)]);  // 先全部校验，再一起执行
+      result = {};
+      for (const [n, s] of specs) { result[n] = manager.start(n, s); syncSlider(n); }
+    } else {
+      throw new Invalid(`未知 action: ${cmd.action}`);
+    }
+  } catch (e) {
+    state = e instanceof Invalid ? 'rejected' : 'error';
+    result = { error: e.message };
+  }
+  aiLog(`${tag} → ${state}${state === 'done' ? '' : '：' + result.error}`);
+  try {
+    await rpc('toy_finish', { p_token: settings.sbToken, p_id: cmd.id, p_state: state, p_result: result });
+  } catch (e) {
+    aiLog(`回写结果失败：${e.message}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 调试
+// ---------------------------------------------------------------------------
+async function scanServices() {
+  const box = $('svcList');
+  box.textContent = '';
+  if (!ble.server || !ble.server.connected) { box.textContent = '先连接设备'; return; }
+  try {
+    const services = await ble.server.getPrimaryServices();
+    if (!services.length) box.textContent = '没有可访问的服务（Web Bluetooth 只能看到预先声明的服务）';
+    for (const s of services) {
+      const h = document.createElement('div');
+      h.style.marginTop = '6px';
+      h.textContent = `服务 ${s.uuid}`;
+      box.append(h);
+      for (const c of await s.getCharacteristics()) {
+        const p = c.properties;
+        const props = ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter((k) => p[k]);
+        const line = document.createElement('div');
+        line.style.paddingLeft = '12px';
+        line.textContent = `└ ${c.uuid}  [${props.join(', ')}]`;
+        if (p.write || p.writeWithoutResponse) {
+          const b = document.createElement('button');
+          b.textContent = '设为 TX';
+          b.onclick = () => { ble.tx = c; bleLog(`TX 临时改为 ${c.uuid}（只对本次连接有效）`); };
+          line.append(b);
+        }
+        if (p.notify || p.indicate) {
+          const b = document.createElement('button');
+          b.textContent = '订阅通知';
+          b.onclick = async () => {
+            c.addEventListener('characteristicvaluechanged', (ev) => bleLog(`通知 ${c.uuid.slice(4, 8)}: ${hex(new Uint8Array(ev.target.value.buffer))}`));
+            await c.startNotifications();
+            bleLog(`已订阅 ${c.uuid}`);
+          };
+          line.append(b);
+        }
+        box.append(line);
+      }
+    }
+  } catch (e) {
+    box.textContent = '读取失败：' + e.message;
+  }
+}
+
+async function sendHex() {
+  if (!ble.connected) { alert('先连接设备'); return; }
+  const raw = $('hexIn').value.replace(/0x/gi, '').trim();
+  if (!/^([0-9a-fA-F]{2}\s*)+$/.test(raw)) { alert('格式：55 03 00 00 01 05 00'); return; }
+  const bytes = Uint8Array.from(raw.match(/[0-9a-fA-F]{2}/g), (h) => parseInt(h, 16));
+  await ble.write(bytes);
+  bleLog(`手动发送 ${hex(bytes)}`);
+}
+
+// ---------------------------------------------------------------------------
+// 事件绑定
+// ---------------------------------------------------------------------------
+$('connectBtn').onclick = async () => {
+  try {
+    if (ble.device && !ble.device.gatt.connected) await ble.open();
+    else await ble.connect();
+  } catch (e) {
+    bleLog('连接失败：' + e.message);
+    if (e.name !== 'NotFoundError') alert('连接失败：' + e.message);
+  }
+};
+$('disconnectBtn').onclick = () => { stopAll(); setTimeout(() => ble.disconnect(), 300); };
+$('presetSel').onchange = (e) => {
+  settings.presetId = e.target.value;
+  store.set('presetId', settings.presetId);
+  renderChannels();
+  if (ble.device && ble.device.gatt.connected) {
+    bleLog('预设已切换，请点「重新连接」让新的 TX 生效');
+    ble.disconnect();
+  }
+};
+$('stopBtn').onclick = () => stopAll('手动');
+$('aiToggle').onchange = (e) => setAi(e.target.checked);
+$('saveBtn').onclick = saveSettings;
+$('capInt').oninput = (e) => { $('capIntVal').textContent = e.target.value; };
+$('scanSvcBtn').onclick = scanServices;
+$('hexBtn').onclick = sendHex;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && settings.stopOnHide) stopAll('页面进入后台');
+});
+window.addEventListener('pagehide', () => stopAll());
+
+renderPresetSelect();
+fillSettingsForm();
+renderChannels();
+if (!navigator.bluetooth) $('devInfo').textContent = '⚠️ 当前浏览器不支持 Web Bluetooth。iPhone 请用 Bluefy 打开。';
+</script>
+</body>
+</html>
