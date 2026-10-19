@@ -193,6 +193,15 @@ const FFE0 = '0000ffe0-0000-1000-8000-00805f9b34fb';
 const FFE1 = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
 const PRESETS = {
+  'svakom-sl278b': {
+    label: 'Svakom SL278B（分体款 / Fatima Pro，已验证协议）',
+    service: FFE0, tx: FFE1, withResponse: false,
+    names: ['SL278B'],
+    channels: {
+      vibration: { label: '震动', max: 10, frame: '55 03 00 00 {on} {v}' },
+      suction:   { label: '吸吮', max: 10, frame: '55 09 00 00 {on} {v}' },
+    },
+  },
   'svakom-pulse': {
     label: 'Svakom Pulse 系（Pulse Union / Galaxie / Lite Neo…）',
     service: FFE0, tx: FFE1, withResponse: false,
@@ -324,7 +333,7 @@ function buildFrame(template, step) {
 // 设置
 // ---------------------------------------------------------------------------
 const settings = {
-  presetId: store.get('presetId', 'guess-split-a'),
+  presetId: store.get('presetId', 'svakom-sl278b'),
   sbUrl: store.get('sbUrl', ''),
   sbKey: store.get('sbKey', ''),
   sbToken: store.get('sbToken', ''),
