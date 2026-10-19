@@ -284,8 +284,12 @@ def get_model():
 
 
 def transcribe(wav: Path) -> dict:
+    # 自己解码成 16kHz 数组再交给 Whisper：faster-whisper 自带的 PyAV 解码
+    # 跟新版 av 不兼容（open() 不再接受 metadata_errors）
+    import librosa
+    audio, _ = librosa.load(str(wav), sr=16000, mono=True)
     segments, info = get_model().transcribe(
-        str(wav), language=WHISPER_LANGUAGE or None, vad_filter=True,
+        audio, language=WHISPER_LANGUAGE or None, vad_filter=True,
         initial_prompt=WHISPER_PROMPT or None)
     lines = [{"start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip()}
              for s in segments]
