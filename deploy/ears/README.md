@@ -31,10 +31,10 @@ Claude 读不了音频，但能读图、读数字、读文字。这台服务把�
 
 前提：Ombre Brain 已按它的 README 装好（Docker、`/opt/ombre-brain/cloudflared` 隧道凭据都在）。
 
-1. 把 `install.sh` 弄到服务器上（仓库临时公开后用一条命令下载，或 OrcaTerm 上传），运行：
+1. 把 `install.sh` 弄到服务器家目录，存成 `ears-install.sh`（免得和 Ombre Brain 的 `install.sh` 重名；仓库临时公开后用一条命令下载，或 OrcaTerm 上传），运行：
 
    ```bash
-   sudo bash install.sh
+   sudo bash ~/ears-install.sh
    ```
 
    它会：
@@ -58,10 +58,10 @@ Claude 读不了音频，但能读图、读数字、读文字。这台服务把�
 ```bash
 cd /opt/ears
 sudo docker compose logs -f --tail 100   # 看日志（每条语音处理完会打印一行）
-sudo bash ~/install.sh                   # 更新（.env、授权状态、语音、模型都保留）
-sudo bash ~/install.sh --warm            # 模型没下载成功时，单独再下载一次
+sudo bash ~/ears-install.sh                 # 更新（.env、授权状态、语音、模型都保留）
+sudo bash ~/ears-install.sh --warm         # 模型没下载成功时，单独再下载一次
 ```
 
 - 语音存在 `/opt/ears/data/clips/`，每条一个目录（原始音频、频谱图、转写、摘要），默认保留 30 天（`.env` 里的 `CLIP_KEEP_DAYS`）
-- 转写不准：`.env` 里把 `WHISPER_MODEL` 改成 `medium`（要 2GB+ 空闲内存，更慢），然后 `sudo docker compose up -d --force-recreate && sudo bash ~/install.sh --warm`
+- 转写不准：`.env` 里把 `WHISPER_MODEL` 改成 `medium`（要 2GB+ 空闲内存，更慢），然后 `sudo docker compose up -d --force-recreate && sudo bash ~/ears-install.sh --warm`
 - 密码泄露了：改 `.env` 里的 `OAUTH_PASSWORD`，`sudo docker compose up -d --force-recreate`，手机录音页和 claude.ai 连接器都要重新输一次新密码。想让所有已连接的客户端失效，再删掉 `/opt/ears/data/oauth.json` 后重启
