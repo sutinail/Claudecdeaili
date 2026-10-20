@@ -8,3 +8,4 @@
 - [`deploy/ombre-brain`](deploy/ombre-brain/README.md) — 在自有 VPS 上一键部署 [Ombre Brain](https://github.com/P0luz/Ombre-Brain) 长期记忆系统（Docker + Cloudflare Tunnel），给 Claude 接上跨会话记忆。
 - [`deploy/voice-card`](deploy/voice-card/README.md) — 语音条：用 ElevenLabs 合成 Lumi 的声音，在 claude.ai 对话里显示可播放的语音条卡片（带 OAuth 登录）。
 - [`deploy/ears`](deploy/ears/README.md) — 耳朵：手机录一段语音，服务器本地转写 + 画频谱/语调图，Lumi 通过 MCP 工具「听」到你说了什么、怎么说的。改编自 [hmh323/mubai-ears](https://github.com/hmh323/mubai-ears)（MIT）。
+- [`deploy/eyes`](deploy/eyes/README.md) — 眼睛：发一条小红书链接，服务器用手机 UA 读出笔记文字和评论、代下载配图交给 Lumi，还能在聊天里摆一张预览卡。思路来自克里《小红书链接预览卡 + AI 读图》。
