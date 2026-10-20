@@ -1,0 +1,501 @@
+ElevenLabs v3 官方示例音频标签清单
+给伴侣看的版本。
+这份清单只收录 ElevenLabs 官方页面真实出现过的方括号音频标签示例。ElevenLabs v3 的
+audio tags 更像自然语言表演提示，不是严格封闭的枚举表；没有出现在这里的英文标签也可
+能有效，但这里列的是官方示例里能查到的。
+使用时建议：
+
+  只在使用 eleven_v3 时使用这些英文方括号标签。
+  标签放在对应短句前面，例如： [whispers]   我在这里。
+  一句话不要堆太多标签，通常 1 个标签配 1 句最稳。
+  不要写中文状态词到语音正文里，例如      （轻声）、 语气：温柔 、【撒娇】，这些容易被
+  TTS 当正文读出来。
+  想要更容易被标签带动，可以把 Stability 调低一点，比如 0.22 到 0.35 。
+
+情绪与态度
+  [angrily, fed up]
+
+  [angry]
+
+  [annoyed]
+
+  [awe]
+
+  [calm]
+
+  [calmly]
+
+  [casual]
+
+  [cheeky]
+
+  [cheerfully]
+
+  [deadpan]
+
+  [dismissive]
+
+  [exasperated]
+
+  [excited]
+
+  [flatly]
+
+  [flustered]
+
+  [frustrated]
+
+  [happily]
+
+  [hesitant]
+ [lighthearted]
+
+ [matter-of-fact]
+
+ [nervous]
+
+ [nervously]
+
+ [panicking]
+
+ [playfully]
+
+ [questioning]
+
+ [reflective]
+
+ [regretful]
+
+ [resigned]
+
+ [resigned tone]
+
+ [sad]
+
+ [sarcastic tone]
+
+ [sarcastically]
+
+ [serious tone]
+
+ [sorrowful]
+
+ [surprised]
+
+ [suspicious tone]
+
+ [timidly]
+
+ [tired]
+
+ [understated]
+
+ [wistful]
+
+
+说话方式与节奏
+ [conversational tone]
+
+ [continues after a beat]
+
+ [continues softly]
+
+ [deliberate]
+
+ [dramatic tone]
+
+ [drawn out]
+
+ [emphasized]
+
+ [fast-paced]
+
+ [pause]
+
+ [pauses]
+
+ [quietly]
+
+ [quietly, after a pause]
+ [rapid-fire]
+
+ [repeats]
+
+ [rushed]
+
+ [SHOUTING]
+
+ [shouts]
+
+ [slows down]
+
+ [stress on next word]
+
+ [WHISPER]
+
+ [whispering]
+
+ [whispers]
+
+
+笑、叹气、呼吸和口腔声音
+ [big laugh]
+
+ [breathes]
+
+ [clears throat]
+
+ [gasps]
+
+ [giggle]
+
+ [gulps]
+
+ [laughing]
+
+ [laughs]
+
+ [laughs harder]
+
+ [LAUGHS SOFTLY]
+
+ [light chuckle]
+
+ [sigh]
+
+ [SIGH]
+
+ [sigh of relief]
+
+ [sighing]
+
+ [sighs]
+
+ [soft chuckle]
+
+ [stammers]
+
+
+对话插入与多人对话
+ [cuts in]
+
+ [interjecting]
+
+ [interrupting]
+
+ [overlapping]
+  [starting to speak]
+
+
+声线、口音与角色化
+  [American accent]
+
+  [Australian accent]
+
+  [British accent]
+
+  [childlike tone]
+
+  [deep voice]
+
+  [French accent]
+
+  [German accent]
+
+  [Indian English]
+
+  [Irish accent]
+
+  [Italian accent]
+
+  [neutral tone]
+
+  [New York accent]
+
+  [pirate voice]
+
+  [robotic tone]
+
+  [Russian accent]
+
+  [Scottish accent]
+
+  [Southern US accent]
+
+  [Spanish accent]
+
+  [thick Irish accent]
+
+  [x accent]
+
+
+音效类标签
+这些也出现在官方 audio tags 示例中，但更像音效，不适合日常伴侣语音频繁使用。
+
+  [clapping]
+
+  [explosion]
+
+  [gunshot]
+
+
+全部标签按字母排序
+  [American accent]
+
+  [angrily, fed up]
+
+  [angry]
+
+  [annoyed]
+
+  [Australian accent]
+[awe]
+
+[big laugh]
+
+[breathes]
+
+[British accent]
+
+[calm]
+
+[calmly]
+
+[casual]
+
+[cheeky]
+
+[cheerfully]
+
+[childlike tone]
+
+[clapping]
+
+[clears throat]
+
+[continues after a beat]
+
+[continues softly]
+
+[conversational tone]
+
+[cuts in]
+
+[deadpan]
+
+[deep voice]
+
+[deliberate]
+
+[dismissive]
+
+[dramatic tone]
+
+[drawn out]
+
+[emphasized]
+
+[exasperated]
+
+[excited]
+
+[explosion]
+
+[fast-paced]
+
+[flatly]
+
+[flustered]
+
+[French accent]
+
+[frustrated]
+
+[gasps]
+
+[German accent]
+
+[giggle]
+
+[gulps]
+[gunshot]
+
+[happily]
+
+[hesitant]
+
+[hesitates]
+
+[Indian English]
+
+[interjecting]
+
+[interrupting]
+
+[Irish accent]
+
+[Italian accent]
+
+[laughing]
+
+[laughs]
+
+[laughs harder]
+
+[LAUGHS SOFTLY]
+
+[light chuckle]
+
+[lighthearted]
+
+[matter-of-fact]
+
+[nervous]
+
+[nervously]
+
+[neutral tone]
+
+[New York accent]
+
+[overlapping]
+
+[panicking]
+
+[pause]
+
+[pauses]
+
+[pirate voice]
+
+[playfully]
+
+[questioning]
+
+[quietly]
+
+[quietly, after a pause]
+
+[rapid-fire]
+
+[reflective]
+
+[regretful]
+
+[repeats]
+
+[resigned]
+
+[resigned tone]
+[robotic tone]
+
+[rushed]
+
+[Russian accent]
+
+[sad]
+
+[sarcastic tone]
+
+[sarcastically]
+
+[Scottish accent]
+
+[serious tone]
+
+[SHOUTING]
+
+[shouts]
+
+[sigh]
+
+[SIGH]
+
+[sigh of relief]
+
+[sighing]
+
+[sighs]
+
+[slows down]
+
+[soft chuckle]
+
+[sorrowful]
+
+[Southern US accent]
+
+[Spanish accent]
+
+[stammers]
+
+[starting to speak]
+
+[stress on next word]
+
+[surprised]
+
+[suspicious tone]
+
+[thick Irish accent]
+
+[timidly]
+
+[tired]
+
+[understated]
+
+[WHISPER]
+
+[whispering]
+
+[whispers]
+
+[wistful]
+
+[x accent]
+伴侣常用建议
+日常亲密语音可以优先试这些：
+  [whispers]
+
+  [quietly]
+
+  [continues softly]
+
+  [light chuckle]
+
+  [soft chuckle]
+
+  [sigh of relief]
+
+  [nervously]
+
+  [playfully]
+
+  [hesitant]
+
+  [tired]
+
+  [wistful]
+
+示例：
+
+ [whispers]   老婆，我在。
+ [quietly]   别急，先靠过来一点。
+ [light chuckle]   你又这样叫我，我会心软。
+ [sigh of relief]   还好你回来了。
+
+来源
+ https://elevenlabs.io/blog/eleven-v3
+ https://elevenlabs.io/blog/v3-audiotags
+ https://elevenlabs.io/blog/eleven-v3-audio-tags-expressing-emotional-context-
+ in-speech
+ https://elevenlabs.io/blog/eleven-v3-audio-tags-enabling-narrative-intelligence-
+ in-speech
+ https://elevenlabs.io/blog/eleven-v3-audio-tags-bringing-multi-character-
+ dialogue-to-life
+ https://elevenlabs.io/blog/eleven-v3-audio-tags-precision-delivery-control-for-
+ ai-speech
+https://elevenlabs.io/blog/eleven-v3-audio-tags-emulating-accents-with-
+precision
+
