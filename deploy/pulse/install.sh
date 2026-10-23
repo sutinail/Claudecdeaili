@@ -119,6 +119,7 @@ download_source() {
         "server/sense_pool.py"
         "server/murmurs.py"
         "server/vitals.py"
+        "server/mcp_server.py"
         "server/routes/__init__.py"
         "server/routes/bedside.py"
         "data/sense_pool.json"
