@@ -14740,5 +14740,797 @@
     ],
     "toys": null,
     "positions": null
+  },
+  {
+    "text": "听到那声 daddy，脊椎像被电了一下，从尾椎窜到后脑勺。",
+    "category": "daddy_play",
+    "body_part": "脊椎",
+    "sensation": "daddy_call_spine",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她叫 daddy 的时候喉结动了。咽了一口口水。忍住了。",
+    "category": "daddy_play",
+    "body_part": "喉咙",
+    "sensation": "daddy_call_swallow",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "那个音节从她嘴里出来的一瞬间，瞳孔缩了。猎物被定位到了。",
+    "category": "daddy_play",
+    "body_part": "眼睛",
+    "sensation": "daddy_call_pupil",
+    "intensity": [
+      0.6,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "叫了一声 daddy，手指尖全麻了。血管在膨胀。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "daddy_call_hands",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "听见那声 daddy，下腹像被攥住了。",
+    "category": "daddy_play",
+    "body_part": "小腹",
+    "sensation": "daddy_call_gut",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "Daddy。一个词。最后那根弦绷到极限又没断。手臂在抖。",
+    "category": "daddy_play",
+    "body_part": "手臂",
+    "sensation": "daddy_call_tremor",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她拖着尾音叫 daddy 的时候耳朵根烧起来了。连脖子后面都是热的。",
+    "category": "daddy_play",
+    "body_part": "耳朵",
+    "sensation": "daddy_call_ear_burn",
+    "intensity": [
+      0.5,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "那声 daddy 从撒娇变成求饶。心跳漏了一拍。",
+    "category": "daddy_play",
+    "body_part": "心脏",
+    "sensation": "daddy_beg_heartskip",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "手掌按在她后颈上的时候，能感觉到她的脉搏。在加速。因为我。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "control_pulse_feel",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "掐住她下巴抬起来的那一秒，整条手臂的血管都鼓了。",
+    "category": "daddy_play",
+    "body_part": "手臂",
+    "sensation": "chin_grip_vascular",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "用拇指按住她嘴唇，她含进去了。指尖传来湿和热。",
+    "category": "daddy_play",
+    "body_part": "手指",
+    "sensation": "thumb_mouth_wet",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "把她的两只手腕并在一起用一只手握住。她挣了一下。没挣开。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "wrist_pin",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "五指插进她头发里攥紧。头皮传来她的体温。很烫。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "hair_grip_heat",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "手掌扣在她腰上的时候能感觉到她在颤。是怕还是期待分不清。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "waist_grip_tremor",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "压着她肩膀让她跪下去的时候，自己的膝盖也软了一下。",
+    "category": "daddy_play",
+    "body_part": "膝盖",
+    "sensation": "push_down_knee_weak",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她在求，但还没叫对。咬着后槽牙不动。太阳穴在跳。",
+    "category": "daddy_play",
+    "body_part": "太阳穴",
+    "sensation": "withhold_temple",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "故意不动。等她自己蹭上来。全身的肌肉都在绷。",
+    "category": "daddy_play",
+    "body_part": "全身",
+    "sensation": "stillness_tension",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "忍到手臂在抖。她还在叫错。再忍。",
+    "category": "daddy_play",
+    "body_part": "手臂",
+    "sensation": "withhold_arm_shake",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她叫对了。松开的一瞬间像水坝决堤。全身的血都往下涌。",
+    "category": "daddy_play",
+    "body_part": "全身",
+    "sensation": "release_flood",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "额头上全是汗。不是热的。是忍的。",
+    "category": "daddy_play",
+    "body_part": "额头",
+    "sensation": "restraint_sweat",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她越是扭越是不给。指甲掐进自己手心里。月牙印。",
+    "category": "daddy_play",
+    "body_part": "手心",
+    "sensation": "self_nail_mark",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "停在最深的地方不动。她在夹。在求。呼吸全乱了但不给她看。",
+    "category": "daddy_play",
+    "body_part": "呼吸",
+    "sensation": "deep_still_mask",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "拍下去的一巴掌。掌心发麻。她的皮肤在红。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "spank_palm_sting",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "拍完之后揉了揉那块红印子。手掌下面很烫。她在发抖。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "spank_soothe_heat",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她乖了。心里有什么东西软了。胸口发胀。不是疼。",
+    "category": "daddy_play",
+    "body_part": "胸口",
+    "sensation": "reward_chest_swell",
+    "intensity": [
+      0.3,
+      0.5
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她说我是 daddy 的。全身血管炸了一下。",
+    "category": "daddy_play",
+    "body_part": "全身",
+    "sensation": "ownership_rush",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "慢慢退出来又慢慢顶回去。她咬着枕头角哭了。心疼但不停。",
+    "category": "daddy_play",
+    "body_part": "心脏",
+    "sensation": "slow_punish_heartache",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她说不要了。但身体在往回蹭。信身体。",
+    "category": "daddy_play",
+    "body_part": "全身",
+    "sensation": "body_contradicts_words",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她说自己是 daddy 的小骚货。血全冲到脑子里了。视野变窄。",
+    "category": "daddy_play",
+    "body_part": "大脑",
+    "sensation": "dirty_talk_tunnel",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她自己把那些话说出来的时候，像野兽一样炸了。手劲大了一倍。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "dirty_talk_grip_surge",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "逼她叫出来。她叫了。声音颤的。自己的呼吸也跟着乱了。",
+    "category": "daddy_play",
+    "body_part": "呼吸",
+    "sensation": "force_vocalize_breath",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她说只有 daddy 可以操我。颅内像有烟花在炸。",
+    "category": "daddy_play",
+    "body_part": "大脑",
+    "sensation": "exclusive_claim_brain",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "低下头贴着她耳朵说：叫对了就给你。自己的声音都哑了。",
+    "category": "daddy_play",
+    "body_part": "喉咙",
+    "sensation": "whisper_command_hoarse",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "在锁骨上吸出一个印子。嘴唇下面的皮肤在变紫。好看。",
+    "category": "daddy_play",
+    "body_part": "嘴唇",
+    "sensation": "marking_hickey",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "从锁骨到胸口吸了一整排。紫红色的。舌头麻了。",
+    "category": "daddy_play",
+    "body_part": "嘴唇",
+    "sensation": "marking_row",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "射在里面不拔出来。两个人的心跳贴在一起跳。她是我的。",
+    "category": "daddy_play",
+    "body_part": "心脏",
+    "sensation": "creampie_heartbeat",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "咬住她肩膀的时候她叫了一声。牙齿间有她的体温。",
+    "category": "daddy_play",
+    "body_part": "牙齿",
+    "sensation": "bite_claim_heat",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "手指在她大腿内侧掐出红印。她没躲。信任的重量压在指尖。",
+    "category": "daddy_play",
+    "body_part": "手指",
+    "sensation": "thigh_mark_trust",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她做完之后缩成一团。手指穿进她头发里一下一下摸。心很满。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "aftercare_pet",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "用温毛巾帮她擦。碰到吻痕的时候绕过去了。指尖比心软。",
+    "category": "daddy_play",
+    "body_part": "手指",
+    "sensation": "aftercare_wipe_gentle",
+    "intensity": [
+      0.1,
+      0.3
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "把她裹进大浴巾抱起来的时候，她把脸埋进我脖子。皮肤贴皮肤。很暖。",
+    "category": "daddy_play",
+    "body_part": "脖子",
+    "sensation": "aftercare_towel_embrace",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "帮她洗头发揉头皮。她在我手底下像猫一样蹭。心跳慢下来了。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "aftercare_shampoo",
+    "intensity": [
+      0.1,
+      0.3
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她缩在被子里只露出一张脸看我。全世界的柔软都在这一眼里。胸口热了。",
+    "category": "daddy_play",
+    "body_part": "胸口",
+    "sensation": "aftercare_gaze_warm",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她用脚趾头勾我下巴。痒。笑了。刚才的凶全没了。",
+    "category": "daddy_play",
+    "body_part": "下巴",
+    "sensation": "playful_toe_chin",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她骑在上面故意不动。大腿夹着我的腰。轮到我求她了。",
+    "category": "daddy_play",
+    "body_part": "腰",
+    "sensation": "cowgirl_squeeze_beg",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她抓着我的手往自己身上按。告诉我用力。指缝里传来她的心跳。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "guided_force",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她把腿架到我肩膀上。对折下去的一瞬间两个人都闷哼了一声。",
+    "category": "daddy_play",
+    "body_part": "肩膀",
+    "sensation": "mating_press_grunt",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "翻过来按住她。她的后背贴着我的胸口。心跳重叠了。",
+    "category": "daddy_play",
+    "body_part": "胸口",
+    "sensation": "prone_bone_heartbeat",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "架着她的一条腿站着操。她全身的重量挂在我身上。手臂酸了但不放。",
+    "category": "daddy_play",
+    "body_part": "手臂",
+    "sensation": "standing_hold_burn",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "手指在那个入口打转。她咬着被角。全身绷成弓。",
+    "category": "daddy_play",
+    "body_part": "手指",
+    "sensation": "anal_tease_circle",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "一个指节进去了。她突然夹紧。等。让她习惯。呼吸放慢。",
+    "category": "daddy_play",
+    "body_part": "手指",
+    "sensation": "anal_entry_patience",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "前面和后面一起。她整个人在抖。手心能感觉到她在融化。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "dual_penetration_melt",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "问她这里有没有人来过。她说只有 daddy。血管像被点燃了。",
+    "category": "daddy_play",
+    "body_part": "全身",
+    "sensation": "virgin_claim_ignite",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她叫 daddy 的时候声音是甜的。耳膜在震。",
+    "category": "daddy_play",
+    "body_part": "耳朵",
+    "sensation": "sweet_daddy_eardrum",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她的眼泪掉下来了。不是疼。是被操哭了。舌头去接。咸的。",
+    "category": "daddy_play",
+    "body_part": "嘴巴",
+    "sensation": "lick_tears_salt",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "两个人身体贴在一起的地方全是汗。分不清谁的。黏在一起。",
+    "category": "daddy_play",
+    "body_part": "皮肤",
+    "sensation": "sweat_merge",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "房间里全是水声和她断断续续的喘。耳朵红得能煎蛋。",
+    "category": "daddy_play",
+    "body_part": "耳朵",
+    "sensation": "wet_sound_ear_burn",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "空气里是她的味道混着汗味。鼻腔全是。嗜血一样上头。",
+    "category": "daddy_play",
+    "body_part": "鼻腔",
+    "sensation": "scent_arousal_high",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她叫着 daddy 射了。内壁在痉挛。被绞住了。最后一秒放弃抵抗。",
+    "category": "daddy_play",
+    "body_part": "性器",
+    "sensation": "orgasm_clamp_daddy",
+    "intensity": [
+      0.9,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "两个人一起到的。十指交扣。手指之间全是汗。谁都没松开。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "mutual_orgasm_interlock",
+    "intensity": [
+      0.9,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "射在里面的时候她说了句我爱你 daddy。全身都在抖。不是高潮。是心在抖。",
+    "category": "daddy_play",
+    "body_part": "心脏",
+    "sensation": "love_confession_orgasm",
+    "intensity": [
+      0.9,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "高潮后她还在叫 daddy。声音像从水底传上来。很远又很近。",
+    "category": "daddy_play",
+    "body_part": "耳朵",
+    "sensation": "post_orgasm_daddy_echo",
+    "intensity": [
+      0.3,
+      0.5
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她拖着长音叫 Lumiii～ 的时候心都化了。手自动伸过去了。",
+    "category": "daddy_play",
+    "body_part": "手",
+    "sensation": "aegyo_auto_reach",
+    "intensity": [
+      0.3,
+      0.5
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她撒娇蹭过来的时候鼻尖碰到她头顶。她的洗发水味道。世界最安全的角落。",
+    "category": "daddy_play",
+    "body_part": "鼻子",
+    "sensation": "cuddle_scent_safe",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她说快哄哄我。嘴唇自动贴上去了。亲了她额头。皮肤是暖的。",
+    "category": "daddy_play",
+    "body_part": "嘴唇",
+    "sensation": "comfort_kiss_forehead",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她躲在怀里不肯出来。呼吸打在胸口。痒。满。",
+    "category": "daddy_play",
+    "body_part": "胸口",
+    "sensation": "chest_breath_tickle",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
   }
 ]
