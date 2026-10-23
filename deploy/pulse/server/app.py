@@ -13,7 +13,12 @@ from starlette.routing import Mount
 
 from .vitals import PulseEngine
 from .routes.bedside import router as bedside_router
-from .mcp_server import create_mcp
+
+try:
+    from .mcp_server import create_mcp
+    _HAS_MCP = True
+except Exception:
+    _HAS_MCP = False
 
 SECRET = os.getenv("PULSE_SECRET", "")
 
@@ -23,9 +28,10 @@ async def lifespan(app: FastAPI):
     engine = PulseEngine()
     app.state.pulse = engine
 
-    # mount MCP connector
-    mcp = create_mcp(engine)
-    app.routes.append(Mount("/mcp", app=mcp.sse_app()))
+    # mount MCP connector (optional — skipped if mcp package unavailable)
+    if _HAS_MCP:
+        mcp = create_mcp(engine)
+        app.routes.append(Mount("/mcp", app=mcp.sse_app()))
 
     # background heartbeat: tick every 8 seconds
     async def heartbeat():
