@@ -9,20 +9,29 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from starlette.routing import Mount
+
 from .vitals import PulseEngine
 from .routes.bedside import router as bedside_router
+from .mcp_server import create_mcp
 
 SECRET = os.getenv("PULSE_SECRET", "")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.pulse = PulseEngine()
+    engine = PulseEngine()
+    app.state.pulse = engine
+
+    # mount MCP connector
+    mcp = create_mcp(engine)
+    app.routes.append(Mount("/mcp", app=mcp.sse_app()))
+
     # background heartbeat: tick every 8 seconds
     async def heartbeat():
         while True:
             try:
-                app.state.pulse.tick()
+                engine.tick()
             except Exception:
                 pass
             await asyncio.sleep(8)
@@ -50,6 +59,9 @@ app.add_middleware(
 
 @app.middleware("http")
 async def check_secret(request: Request, call_next):
+    # MCP connector has its own auth via Cloudflare tunnel
+    if request.url.path.startswith("/mcp"):
+        return await call_next(request)
     if SECRET:
         token = request.headers.get("X-Pulse-Secret", "")
         if token != SECRET:
