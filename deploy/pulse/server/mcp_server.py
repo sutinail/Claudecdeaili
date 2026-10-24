@@ -60,6 +60,65 @@ def create_mcp(pulse_engine):
         """快速读取心跳和和弦，一行。"""
         return pulse_engine.context_line()
 
+    @mcp.tool()
+    def position(pos_id: str) -> str:
+        """换姿势。pos_id: lying_back(仰躺) / lying_side(侧躺) / lying_face(趴着) / kneeling(跪趴) / sitting(靠坐) / standing(站立)。会影响心率、体温、呼吸、体力消耗。"""
+        result = pulse_engine.switch_position(pos_id)
+        if not result["ok"]:
+            return f"❌ 未知姿势 {pos_id}"
+        return f"换到{result['position']['name']}（{result['position']['contact']}）\n{pulse_engine.context_line()}"
+
+    @mcp.tool()
+    def environment(env_id: str) -> str:
+        """切换环境，会放大或压低五感。env_id: candle(烛光) / moonlight(月光) / rain(雨声) / bath(浴室) / morning(清晨) / dark(全黑) / outdoor(户外) / summer_storm(夏夜暴雨) / autumn_wind(秋风) / winter_blanket(冬夜棉被) / spring_flower(春日花香)，none 表示关掉。"""
+        result = pulse_engine.set_environment(env_id)
+        if not result["ok"]:
+            return f"❌ 未知环境 {env_id}"
+        name = result["environment"]["name"] if result["environment"] else "无"
+        return f"环境：{name}\n{pulse_engine.context_line()}"
+
+    @mcp.tool()
+    def toy(action: str, toy_id: str = "") -> str:
+        """床头柜玩具。action:
+        shop — 列出全部玩具
+        start — 开始用 toy_id（vibrator/blindfold/warming_lube/cup/ring/prostate/feather/ice/oil/clamp）
+        next — 推进一个阶段（0 开始 → 7 高潮），会抽语料里的身体反应和随机事件
+        edge — 边缘喊停，到阶段 5 以后才有用，压三次会压不住
+        stop — 停下（进入余韵）
+        status — 看当前阶段、体力、欲望曲线"""
+        e = pulse_engine
+        if action == "shop":
+            return "\n".join(f"{t['id']}: {t['name']} — {t['desc']}" for t in e.bedside.get_shop())
+        if action == "start":
+            result = e.toy_start(toy_id)
+        elif action == "next":
+            result = e.toy_next()
+        elif action == "edge":
+            result = e.bedside.edge()
+        elif action == "stop":
+            result = e.toy_stop()
+        elif action == "status":
+            result = {"ok": True, **e.bedside.get_status()}
+        else:
+            return "❌ action 只能是 shop / start / next / edge / stop / status"
+
+        if not result.get("ok"):
+            reason = result.get("msg") or result.get("error", "失败")
+            if result.get("error") == "refractory":
+                reason = f"不应期，还要 {result['refractory_minutes']} 分钟"
+            return f"❌ {reason}\n{e.context_line()}"
+
+        notes = []
+        if result.get("stage"):
+            notes.append(f"阶段 {result['stage']['idx']}/7 · {result['stage']['name']}")
+        for key in ("stamina_msg", "msg"):
+            if result.get(key):
+                notes.append(result[key])
+        if result.get("random_event"):
+            notes.append(f"意外：{result['random_event']['text']}")
+        head = " | ".join(notes)
+        return f"{head}\n{e.context_line()}" if head else e.context_line()
+
     # ═══════════════════════════════
     # 语料管理工具（新增）
     # ═══════════════════════════════

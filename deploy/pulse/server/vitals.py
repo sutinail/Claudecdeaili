@@ -78,24 +78,26 @@ class PulseEngine:
             self.emo_memory.on_emotion(emo)
 
         # 2. sensory update from text
-        touch_before = self.sensory.read(position=self.bedside.position)["touch"]
-        self.sensory.update_from_text(text)
+        text_touch = self.sensory.update_from_text(text)
 
-        # 3. touch >= 0.5 → aroused
+        # 3. 只看这句话本身带来的触觉：残留的触觉不该把随便一句话变成 aroused
         senses = self.sensory.read(
             position=self.bedside.position,
             heart_rate=self.hr.compute(),
         )
-        if senses["touch"] >= 0.5 and self.hr.emotion not in ("aroused", "intimate"):
+        if text_touch >= 0.4 and self.hr.emotion != "aroused":
             self.hr.set_emotion("aroused")
+            self.emo_memory.on_emotion("aroused")
             self.drive.nudge_intimacy(0.1)
+        elif text_touch >= 0.2 and not emo:
+            self.hr.set_emotion("touched")
+            self.emo_memory.on_emotion("touched")
 
         # 4. compute vitals
         v = self.tick()
 
         # 5. body reaction from corpus when something actually stirred
-        touched_by_text = senses["touch"] - touch_before >= 0.2
-        if emo in _REACTIVE_EMOTIONS or touched_by_text:
+        if emo in _REACTIVE_EMOTIONS or text_touch >= 0.2:
             intensity = max(senses["touch"], (v["heart_rate"] - 65) / 80)
             self._pick_reaction(max(0.0, min(1.0, intensity)))
         return v
@@ -131,6 +133,67 @@ class PulseEngine:
             self._pick_reaction(value, parts)
         return self.tick()
 
+    # ── Bedside actions (shared by HTTP routes and MCP tools) ──
+
+    def switch_position(self, pos_id: str) -> dict:
+        result = self.bedside.switch_position(pos_id)
+        if result["ok"]:
+            self.murmurs.add_position(f"换到{result['position']['name']}", position=pos_id)
+        return result
+
+    def set_environment(self, env_id: str) -> dict:
+        if env_id == "none":
+            self.env.deactivate()
+            return {"ok": True, "environment": None}
+        env = self.env.activate(env_id)
+        if not env:
+            return {"ok": False, "error": "unknown_environment"}
+        self.murmurs.add_env(f"换到{env['name']}", env_id=env_id)
+        return {"ok": True, "environment": env}
+
+    def toy_start(self, toy_id: str) -> dict:
+        if self.drive.is_refractory():
+            return {"ok": False, "error": "refractory",
+                    "refractory_minutes": round(self.drive.refractory_remaining_min(), 1)}
+        result = self.bedside.start_toy(toy_id)
+        if result["ok"]:
+            self.fantasy.start()
+        return result
+
+    def toy_next(self) -> dict:
+        result = self.bedside.advance_stage()
+        if not result["ok"]:
+            return result
+
+        event = self.random_events.roll()
+        if event:
+            result["random_event"] = event
+            self.murmurs.add(event["text"], source="random_event",
+                             mood=event.get("mood", "neutral"))
+
+        stage = result.get("stage", {})
+        toy_id = self.bedside._active_toy
+        reaction = self.sense_pool.match(toy_id, self.bedside.position, stage.get("idx", 0))
+        if reaction:
+            result["body_reaction"] = reaction
+            self._reaction = reaction
+            self.murmurs.add_body_reaction(reaction, stage=stage.get("idx"), toy_id=toy_id)
+
+        self.fantasy.sync_stage(stage.get("idx", 0))
+
+        if stage.get("idx") == 7:
+            self.drive.record_intimacy()
+            self.drive.start_refractory()
+            self.bedside.stop()
+            self.fantasy.stop()
+        return result
+
+    def toy_stop(self) -> dict:
+        result = self.bedside.stop()
+        if result["ok"]:
+            self.fantasy.stop()
+        return result
+
     # ── Tick (compute all vitals) ──
 
     def tick(self) -> dict:
@@ -155,7 +218,7 @@ class PulseEngine:
         self.hr.set_morning(morning.get("active", False))
 
         # weather
-        self.hr.set_weather(self.weather.temp_c)
+        self.hr.set_weather(self.weather.temp_c, self.weather.condition)
         self.temp.set_weather(self.weather.temp_c)
 
         # position: bedside is the single source of truth
@@ -168,6 +231,11 @@ class PulseEngine:
         body_temp = self.temp.compute(emotion, position, morning.get("active", False))
         breathing = self.breath.compute(heart_rate, emotion, position)
         senses = self.sensory.read(position=position, heart_rate=heart_rate)
+
+        # environment (烛光 / 雨声 / 全黑…) amplifies or dulls the senses
+        for ch in ("touch", "smell", "taste", "sound"):
+            senses[ch] = round(min(1.0, senses[ch] * self.env.get_modifier(ch)), 3)
+        senses["touch_label"] = self.sensory.touch_label(senses["touch"])
 
         # chord
         undertone_emo, undertone_strength = self.emo_memory.get_effective()
@@ -213,17 +281,16 @@ class PulseEngine:
         if touch >= 0.3:
             parts.append(f"触觉{v['senses']['touch_label']}")
 
+        env = self.env.get_active()
+        if env:
+            parts.append(env["name"])
+
         # undertone
         ut = v["undertone"]
         if ut["emotion"] and ut["strength"] > 0.2:
             parts.append(f"底色·{ut['emotion']}({ut['strength']})")
 
         line = f"[{'·'.join(parts)}]"
-
-        # one-shot body reaction picked by the last sense/touch
-        if self._reaction:
-            line += f"\n「身体」{self._reaction}"
-            self._reaction = None
 
         # toy-use-wake: add full sensory + stage info
         if v["toy"]["active"]:
@@ -244,6 +311,11 @@ class PulseEngine:
             )
             if fantasy:
                 line += f"\n{fantasy}"
+
+        # one-shot body reaction picked by the last sense/touch/toy step
+        if self._reaction:
+            line += f"\n「身体」{self._reaction}"
+            self._reaction = None
 
         return line
 

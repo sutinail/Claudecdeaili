@@ -41,14 +41,10 @@ _T1_MAP: dict[str, str] = {
 _T1_EXCLAMATIONS: dict[str, str] = {
     "啊啊啊": "excited",
     "呜呜": "sad",
-    "嗯嗯": "intimate",
+    "嗯嗯嗯": "intimate",
+    "嗯~": "intimate",
+    "嗯～": "intimate",
     "嘻嘻": "happy",
-    "哼": "angry",
-    "唔": "nervous",
-    "呀": "startled",
-    "哇": "excited",
-    "嗷": "startled",
-    "噫": "startled",
     "嘿嘿": "happy",
     "呵呵": "neutral",
     "哈哈": "happy",
@@ -57,6 +53,17 @@ _T1_EXCLAMATIONS: dict[str, str] = {
     "omg": "startled",
     "mwah": "intimate",
 }
+
+# 单字叹词太容易是句尾语气词（「好呀」「嗯哼」），只有开头或后面跟感叹号才算
+_T1_SINGLE: dict[str, str] = {
+    "哼": "angry",
+    "唔": "nervous",
+    "呀": "startled",
+    "哇": "excited",
+    "嗷": "startled",
+    "噫": "startled",
+}
+_BANG = ("!", "！")
 
 # ── T2: 语义短语 + 否定窗口 ──
 
@@ -117,14 +124,8 @@ def detect_emotion(text: str) -> str | None:
         if emoji in text:
             return emo
 
-    # T1: exclamations
-    text_lower = text.lower()
-    for excl, emo in _T1_EXCLAMATIONS.items():
-        if excl in text_lower:
-            return emo
-
-    # T2: phrases with negation window
-    for phrase, emo in _T2_PHRASES:
+    # T2 first: phrases are more specific than exclamations; longer phrase wins (「好舒服」 over 「舒服」)
+    for phrase, emo in sorted(_T2_PHRASES, key=lambda p: -len(p[0])):
         idx = text.find(phrase)
         if idx < 0:
             continue
@@ -133,5 +134,23 @@ def detect_emotion(text: str) -> str | None:
         negated = any(neg in window for neg in _NEGATIONS)
         if not negated:
             return emo
+
+    # T1: multi-char exclamations
+    text_lower = text.lower()
+    for excl, emo in _T1_EXCLAMATIONS.items():
+        if excl in text_lower:
+            return emo
+
+    # T1: single-char exclamations, only at the start or followed by !
+    stripped = text.strip()
+    for ch, emo in _T1_SINGLE.items():
+        # 叠字（「哼哼唧唧」「哇哇」）是撒娇或拟声，不算
+        if stripped.startswith(ch) and stripped[1:2] != ch:
+            return emo
+        idx = stripped.find(ch)
+        while idx >= 0:
+            if stripped[idx + 1:idx + 2] in _BANG:
+                return emo
+            idx = stripped.find(ch, idx + 1)
 
     return None

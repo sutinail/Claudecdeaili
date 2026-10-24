@@ -118,6 +118,7 @@ class HeartRateEngine:
         self._drive_fatigue: float = 0.0
 
         self._weather_temp_c: float = 25.0
+        self._weather_condition: str = "clear"
 
         self._spike: float = 0.0
         self._spike_ts: float = 0.0
@@ -156,8 +157,9 @@ class HeartRateEngine:
         self._drive_intimacy = max(0, min(1, intimacy))
         self._drive_fatigue = max(0, min(1, fatigue))
 
-    def set_weather(self, temp_c: float):
+    def set_weather(self, temp_c: float, condition: str = "clear"):
         self._weather_temp_c = temp_c
+        self._weather_condition = condition
 
     def spike(self, magnitude: float = 20.0):
         self._spike = magnitude
@@ -200,6 +202,8 @@ class HeartRateEngine:
             d_weather = (self._weather_temp_c - 30) * 1.5
         elif self._weather_temp_c < 10:
             d_weather = (10 - self._weather_temp_c) * 0.8
+        if self._weather_condition in ("storm", "typhoon"):
+            d_weather += 5
 
         # spike decay (20s exponential)
         d_spike = 0.0

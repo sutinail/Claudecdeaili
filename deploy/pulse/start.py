@@ -11,6 +11,7 @@ from urllib.parse import parse_qs
 import uvicorn
 from server.vitals import PulseEngine
 from server.mcp_server import create_mcp
+from server.weather_fetch import fetch as fetch_weather
 
 MCP_KEY = os.getenv("PULSE_MCP_KEY", "")
 
@@ -74,8 +75,22 @@ async def main():
                 pass
             await asyncio.sleep(8)
 
-    print("🫀 脉 · Pulse — API :8300 | MCP :8301")
-    await asyncio.gather(api.serve(), mcp_srv.serve(), heartbeat())
+    # ── Weather (every 30 min) ──
+    async def weather():
+        while True:
+            try:
+                result = await asyncio.to_thread(fetch_weather)
+                if result is None:
+                    print("☁️ 没配置 PULSE_WEATHER_LAT/LON，天气停在默认 25°C")
+                    return
+                engine.weather.update(*result)
+                print(f"☁️ 天气 {result[0]}°C {result[2]}")
+            except Exception as err:
+                print(f"☁️ 天气拉取失败：{err}")
+            await asyncio.sleep(30 * 60)
+
+    print("🫀 脉 · Pulse — API :8300 | MCP :8301", flush=True)
+    await asyncio.gather(api.serve(), mcp_srv.serve(), heartbeat(), weather())
 
 
 if __name__ == "__main__":

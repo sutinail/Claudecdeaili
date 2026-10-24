@@ -99,19 +99,24 @@ class SensoryField:
             "sound": {"value": 0.0, "ts": time.time()},
         }
 
-    def update_from_text(self, text: str):
-        for word, delta in _TOUCH_TRIGGERS:
-            if word in text:
-                self._add("touch", delta)
-        for word, delta in _SMELL_TRIGGERS:
-            if word in text:
-                self._add("smell", delta)
-        for word, delta in _TASTE_TRIGGERS:
-            if word in text:
-                self._add("taste", delta)
-        for word, delta in _SOUND_TRIGGERS:
-            if word in text:
-                self._add("sound", delta)
+    def update_from_text(self, text: str) -> float:
+        """返回这句话本身带来的触觉增量。"""
+        touch_added = 0.0
+        for channel, triggers in (
+            ("touch", _TOUCH_TRIGGERS),
+            ("smell", _SMELL_TRIGGERS),
+            ("taste", _TASTE_TRIGGERS),
+            ("sound", _SOUND_TRIGGERS),
+        ):
+            # 长词先匹配并从文本里挖掉，「抱抱」就不会再被「抱」算第二次
+            remaining = text
+            for word, delta in sorted(triggers, key=lambda t: -len(t[0])):
+                if word in remaining:
+                    self._add(channel, delta)
+                    remaining = remaining.replace(word, "\0")
+                    if channel == "touch":
+                        touch_added += delta
+        return touch_added
 
     def set_touch(self, value: float):
         self._channels["touch"]["value"] = max(0, min(1, value))
@@ -149,10 +154,10 @@ class SensoryField:
             result["sound"] = min(1.0, result["sound"] + boost * 0.5)
 
         # labels
-        result["touch_label"] = self._label(result["touch"])
+        result["touch_label"] = self.touch_label(result["touch"])
         return result
 
-    def _label(self, val: float) -> str:
+    def touch_label(self, val: float) -> str:
         for threshold, lbl in _TOUCH_LABELS:
             if val <= threshold:
                 return lbl

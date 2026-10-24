@@ -130,50 +130,15 @@ async def shop(request: Request):
 
 @router.post("/use/start")
 async def start_toy(request: Request, body: ToyInput):
-    e = _engine(request)
-    if e.drive.is_refractory():
-        remaining = e.drive.refractory_remaining_min()
-        return {"ok": False, "error": "refractory",
-                "refractory_minutes": round(remaining, 1)}
-    result = e.bedside.start_toy(body.toy_id)
-    if result["ok"]:
-        e.fantasy.start()
-    return result
+    return _engine(request).toy_start(body.toy_id)
 
 @router.post("/use/next")
 async def advance_stage(request: Request):
-    e = _engine(request)
-    result = e.bedside.advance_stage()
-    if result["ok"]:
-        # random event
-        event = e.random_events.roll()
-        if event:
-            result["random_event"] = event
-            e.murmurs.add(event["text"], source="random_event",
-                         mood=event.get("mood", "neutral"))
+    return _engine(request).toy_next()
 
-        # sense pool body reaction
-        stage = result.get("stage", {})
-        reaction = e.sense_pool.match(
-            e.bedside._active_toy, e.bedside._position,
-            stage.get("idx", 0),
-        )
-        if reaction:
-            result["body_reaction"] = reaction
-            e.murmurs.add_body_reaction(reaction,
-                                        stage=stage.get("idx"),
-                                        toy_id=e.bedside._active_toy)
-
-        # sync fantasy
-        e.fantasy.sync_stage(stage.get("idx", 0))
-
-        # check if climax
-        if stage.get("idx") == 7:
-            e.drive.record_intimacy()
-            e.drive.start_refractory()
-            e.bedside.stop()
-            e.fantasy.stop()
-    return result
+@router.post("/use/stop")
+async def stop_toy(request: Request):
+    return _engine(request).toy_stop()
 
 @router.get("/use/current")
 async def current_use(request: Request):
@@ -195,14 +160,7 @@ async def positions(request: Request):
 
 @router.post("/use/position")
 async def switch_position(request: Request, body: PositionInput):
-    e = _engine(request)
-    result = e.bedside.switch_position(body.position_id)
-    if result["ok"]:
-        e.murmurs.add_position(
-            f"换到{result['position']['name']}",
-            position=body.position_id,
-        )
-    return result
+    return _engine(request).switch_position(body.position_id)
 
 
 # ── Combo ──
@@ -268,11 +226,7 @@ async def env_shop(request: Request):
 
 @router.post("/env/activate")
 async def env_activate(request: Request, body: EnvironmentInput):
-    e = _engine(request)
-    result = e.env.activate(body.env_id)
-    if result:
-        return {"ok": True, "environment": result}
-    return {"ok": False, "error": "unknown_environment"}
+    return _engine(request).set_environment(body.env_id)
 
 @router.get("/env/active")
 async def env_active(request: Request):
