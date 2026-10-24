@@ -78,10 +78,13 @@ def create_mcp(pulse_engine):
         return f"环境：{name}\n{pulse_engine.context_line()}"
 
     @mcp.tool()
-    def toy(action: str, toy_id: str = "") -> str:
+    def toy(action: str, toy_id: str = "", scene: str = "") -> str:
         """床头柜玩具。action:
         shop — 列出全部玩具
-        start — 开始用 toy_id（vibrator/blindfold/warming_lube/cup/ring/prostate/feather/ice/oil/clamp）
+        start — 开始用 toy_id（vibrator/blindfold/warming_lube/cup/ring/prostate/feather/ice/oil/clamp）。
+                可选 scene 指定场景，语料才会抽这个场景的句子：daddy_play / bath_play / mirror_play / oral_play /
+                tender_sex / foreplay_tease / kiss_play / location_play。不填就只抽通用、玩具、姿势相关的。
+                环境开着「浴室」自动算 bath_play，「户外」自动算 location_play。
         next — 推进一个阶段（0 开始 → 7 高潮），会抽语料里的身体反应和随机事件
         edge — 边缘喊停，到阶段 5 以后才有用，压三次会压不住
         stop — 停下（进入余韵）
@@ -90,7 +93,7 @@ def create_mcp(pulse_engine):
         if action == "shop":
             return "\n".join(f"{t['id']}: {t['name']} — {t['desc']}" for t in e.bedside.get_shop())
         if action == "start":
-            result = e.toy_start(toy_id)
+            result = e.toy_start(toy_id, scene or None)
         elif action == "next":
             result = e.toy_next()
         elif action == "edge":
@@ -106,6 +109,10 @@ def create_mcp(pulse_engine):
             reason = result.get("msg") or result.get("error", "失败")
             if result.get("error") == "refractory":
                 reason = f"不应期，还要 {result['refractory_minutes']} 分钟"
+            elif result.get("error") == "unknown_scene":
+                reason = f"未知场景 {scene}"
+            elif result.get("error") == "unknown_toy":
+                reason = f"未知玩具 {toy_id}，先用 shop 看看有哪些"
             return f"❌ {reason}\n{e.context_line()}"
 
         notes = []

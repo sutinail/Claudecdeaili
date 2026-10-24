@@ -28,6 +28,13 @@ _CATEGORY_WEIGHTS = {
 }
 
 
+# 场景类语料写的是"正在发生的事"，只有指定了这个场景才抽
+SCENES = {
+    "daddy_play", "bath_play", "mirror_play", "oral_play",
+    "tender_sex", "foreplay_tease", "kiss_play", "location_play",
+}
+
+
 class SensePool:
     def __init__(self):
         self._pool: list[dict] = []
@@ -48,8 +55,11 @@ class SensePool:
             json.dump(self._pool, f, ensure_ascii=False, indent=2)
 
     def match(self, toy_id: str | None, position_id: str | None,
-              stage_idx: int, context: str = "advance") -> str | None:
+              stage_idx: int, context: str = "advance",
+              scene: str | None = None) -> str | None:
         categories = self._context_categories(context)
+        if context == "advance":
+            categories = (categories - SCENES) | ({scene} & SCENES)
         intensity = stage_idx / 7.0
 
         candidates = []

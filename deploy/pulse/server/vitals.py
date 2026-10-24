@@ -17,6 +17,9 @@ from .drive_system import WeatherState, EnvironmentSystem
 from .bedside import BedsideEngine
 from .fantasy import FantasyEngine
 from .random_events import RandomEventSystem
+from .sense_pool import SCENES
+
+_ENV_SCENE = {"bath": "bath_play", "outdoor": "location_play"}
 
 TOUCH_PARTS = {"top", "cheek", "chest", "back", "belly", "hand_l", "hand_r", "lap", "foot"}
 _INTIMATE_PARTS = {"chest", "belly", "lap"}
@@ -59,6 +62,14 @@ class PulseEngine:
 
         self._last_tick = time.time()
         self._reaction: str | None = None
+        self._scene: str | None = None
+
+    @property
+    def scene(self) -> str | None:
+        if self._scene:
+            return self._scene
+        env = self.env.get_active()
+        return _ENV_SCENE.get(env["id"]) if env else None
 
     def _pick_reaction(self, intensity: float, parts: list[str] | None = None):
         body_parts = None
@@ -151,12 +162,15 @@ class PulseEngine:
         self.murmurs.add_env(f"换到{env['name']}", env_id=env_id)
         return {"ok": True, "environment": env}
 
-    def toy_start(self, toy_id: str) -> dict:
+    def toy_start(self, toy_id: str, scene: str | None = None) -> dict:
+        if scene and scene not in SCENES:
+            return {"ok": False, "error": "unknown_scene"}
         if self.drive.is_refractory():
             return {"ok": False, "error": "refractory",
                     "refractory_minutes": round(self.drive.refractory_remaining_min(), 1)}
         result = self.bedside.start_toy(toy_id)
         if result["ok"]:
+            self._scene = scene or None
             self.fantasy.start()
         return result
 
@@ -173,7 +187,8 @@ class PulseEngine:
 
         stage = result.get("stage", {})
         toy_id = self.bedside._active_toy
-        reaction = self.sense_pool.match(toy_id, self.bedside.position, stage.get("idx", 0))
+        reaction = self.sense_pool.match(toy_id, self.bedside.position, stage.get("idx", 0),
+                                         scene=self.scene)
         if reaction:
             result["body_reaction"] = reaction
             self._reaction = reaction
@@ -186,12 +201,14 @@ class PulseEngine:
             self.drive.start_refractory()
             self.bedside.stop()
             self.fantasy.stop()
+            self._scene = None
         return result
 
     def toy_stop(self) -> dict:
         result = self.bedside.stop()
         if result["ok"]:
             self.fantasy.stop()
+            self._scene = None
         return result
 
     # ── Tick (compute all vitals) ──
@@ -300,7 +317,8 @@ class PulseEngine:
                 f" [玩具:{toy_status.get('toy', {}).get('name', '?')}·"
                 f"阶段{stage.get('idx', '?')}/7·{stage.get('name', '?')}·"
                 f"欲望{toy_status.get('desire_curve_pct', 0):.0%}·"
-                f"体力{toy_status.get('stamina_pct', 1):.0%}]"
+                f"体力{toy_status.get('stamina_pct', 1):.0%}"
+                f"{'·场景' + self.scene if self.scene else ''}]"
             )
             line += extra
 

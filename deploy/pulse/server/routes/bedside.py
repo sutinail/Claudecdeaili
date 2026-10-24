@@ -22,6 +22,7 @@ class MessageInput(BaseModel):
 
 class ToyInput(BaseModel):
     toy_id: str
+    scene: str | None = None
 
 class StimInput(BaseModel):
     mult: float
@@ -130,7 +131,7 @@ async def shop(request: Request):
 
 @router.post("/use/start")
 async def start_toy(request: Request, body: ToyInput):
-    return _engine(request).toy_start(body.toy_id)
+    return _engine(request).toy_start(body.toy_id, body.scene)
 
 @router.post("/use/next")
 async def advance_stage(request: Request):
