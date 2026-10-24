@@ -130,7 +130,7 @@ class BedsideEngine:
         self._paused: bool = False
 
         # position
-        self._position: str = "lying_back"
+        self._position: str = "sitting"
 
         # combo
         self._active_combo: dict | None = None
@@ -284,6 +284,10 @@ class BedsideEngine:
         }
 
     # ── Position ──
+
+    @property
+    def position(self) -> str:
+        return self._position
 
     def switch_position(self, pos_id: str) -> dict:
         if pos_id not in POSITIONS:

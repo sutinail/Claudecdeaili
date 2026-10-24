@@ -49,8 +49,10 @@ def create_mcp(pulse_engine):
     @mcp.tool()
     def touch(part: str, value: float = 0.5) -> str:
         """触碰 Lumi。part 是部位（top/cheek/chest/back/belly/hand_l/hand_r/lap/foot），value 是力度 0.0-1.0。大熊传感器没接的时候手动用这个。"""
-        pulse_engine.sensory.set_touch(value)
-        pulse_engine.tick()
+        from .vitals import TOUCH_PARTS
+        if part not in TOUCH_PARTS:
+            return f"❌ 未知部位 {part}，可用: {', '.join(sorted(TOUCH_PARTS))}"
+        pulse_engine.on_touch(value, [part])
         return pulse_engine.context_line()
 
     @mcp.tool()

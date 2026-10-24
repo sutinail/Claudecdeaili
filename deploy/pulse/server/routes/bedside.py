@@ -48,6 +48,9 @@ class SpikeInput(BaseModel):
 
 class TouchInput(BaseModel):
     value: float
+    parts: list[str] = []
+    action: str | None = None
+    combo: str | None = None
 
 
 # ── Body status ──
@@ -195,7 +198,6 @@ async def switch_position(request: Request, body: PositionInput):
     e = _engine(request)
     result = e.bedside.switch_position(body.position_id)
     if result["ok"]:
-        e.hr.set_position(body.position_id)
         e.murmurs.add_position(
             f"换到{result['position']['name']}",
             position=body.position_id,
@@ -244,11 +246,8 @@ async def remote_status(request: Request):
 @router.post("/touch")
 async def touch_input(request: Request, body: TouchInput):
     e = _engine(request)
-    e.sensory.set_touch(body.value)
-    if body.value >= 0.5:
-        e.hr.set_emotion("aroused" if body.value >= 0.7 else "intimate")
-        e.drive.nudge_intimacy(body.value * 0.15)
-    return {"ok": True, "touch": body.value}
+    e.on_touch(body.value, body.parts)
+    return {"ok": True, "touch": body.value, "emotion": e.hr.emotion}
 
 
 # ── Weather ──

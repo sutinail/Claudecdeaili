@@ -18,6 +18,10 @@ from .bedside import BedsideEngine
 from .fantasy import FantasyEngine
 from .random_events import RandomEventSystem
 
+TOUCH_PARTS = {"top", "cheek", "chest", "back", "belly", "hand_l", "hand_r", "lap", "foot"}
+_INTIMATE_PARTS = {"chest", "belly", "lap"}
+_TOUCH_EMO_RANK = {"touched": 1, "intimate": 2, "aroused": 3}
+
 
 class PulseEngine:
     """一脉相连：从心跳到指尖。"""
@@ -55,7 +59,7 @@ class PulseEngine:
 
         # 3. touch >= 0.5 → aroused
         senses = self.sensory.read(
-            position=self.hr._position,
+            position=self.bedside.position,
             heart_rate=self.hr.compute(),
         )
         if senses["touch"] >= 0.5 and self.hr.emotion not in ("aroused", "intimate"):
@@ -63,6 +67,35 @@ class PulseEngine:
             self.drive.nudge_intimacy(0.1)
 
         # 4. compute vitals
+        return self.tick()
+
+    # ── Touch (MCP tool / ESP32 bear) ──
+
+    def on_touch(self, value: float, parts: list[str] | None = None) -> dict:
+        """触碰 → 触觉 + 心跳尖峰 + 情绪 + 亲密驱动。value 已经是最终力度，这里不再按部位加权。"""
+        value = max(0.0, min(1.0, value))
+        parts = [p for p in (parts or []) if p in TOUCH_PARTS]
+        intimate = any(p in _INTIMATE_PARTS for p in parts)
+
+        self.sensory.set_touch(value)
+        self.hr.spike(value * (26 if intimate else 20))
+        self.drive.nudge_intimacy(value * (0.15 if intimate else 0.05))
+
+        if value >= 0.7 and intimate:
+            emo = "aroused"
+        elif value >= 0.5:
+            emo = "intimate"
+        elif value >= 0.2:
+            emo = "touched"
+        else:
+            emo = None
+
+        # 只往上升级，轻碰不会把已经很热的状态拉回 touched
+        current_rank = _TOUCH_EMO_RANK.get(self.hr.emotion, 0)
+        if emo and _TOUCH_EMO_RANK[emo] >= current_rank:
+            self.hr.set_emotion(emo)
+            self.emo_memory.on_emotion(emo)
+
         return self.tick()
 
     # ── Tick (compute all vitals) ──
@@ -91,10 +124,13 @@ class PulseEngine:
         self.hr.set_weather(self.weather.temp_c)
         self.temp.set_weather(self.weather.temp_c)
 
+        # position: bedside is the single source of truth
+        position = self.bedside.position
+        self.hr.set_position(position)
+
         # compute
         heart_rate = self.hr.compute()
         emotion = self.hr.emotion
-        position = self.hr._position
         body_temp = self.temp.compute(emotion, position, morning.get("active", False))
         breathing = self.breath.compute(heart_rate, emotion, position)
         senses = self.sensory.read(position=position, heart_rate=heart_rate)
