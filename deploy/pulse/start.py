@@ -9,6 +9,21 @@ from server.vitals import PulseEngine
 from server.mcp_server import create_mcp
 
 
+class HostRewrite:
+    """把任意 Host 头重写为 localhost，绕过 MCP SSE 的 host 校验。"""
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] in ("http", "websocket"):
+            scope = dict(scope)
+            scope["headers"] = [
+                (b"host", b"localhost") if k == b"host" else (k, v)
+                for k, v in scope.get("headers", [])
+            ]
+        await self.app(scope, receive, send)
+
+
 async def main():
     engine = PulseEngine()
 
@@ -26,6 +41,8 @@ async def main():
         mcp_app = create_mcp.get_sse_app(mcp)
     except Exception:
         mcp_app = mcp.sse_app()
+
+    mcp_app = HostRewrite(mcp_app)
 
     mcp_srv = uvicorn.Server(uvicorn.Config(
         mcp_app, host="0.0.0.0", port=8301, log_level="info",
