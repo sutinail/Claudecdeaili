@@ -39,7 +39,8 @@ _PART_CORPUS = {
 }
 
 # 聊天时这些情绪出现，才从语料池里抽身体反应
-_REACTIVE_EMOTIONS = {"touched", "intimate", "aroused", "shy", "excited", "startled", "nervous"}
+_REACTIVE_EMOTIONS = {"touched", "intimate", "aroused", "shy", "excited", "startled", "nervous",
+                      "sad", "angry", "scolded"}
 
 # 话里提到的部位 → 语料池 body_part（长词先匹配）
 _PART_KEYWORDS = {
