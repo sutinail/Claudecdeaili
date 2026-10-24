@@ -8,7 +8,10 @@ import random
 from pathlib import Path
 from collections import Counter, deque
 
+from . import embedding
+
 DATA_PATH = Path(__file__).parent.parent / "data" / "sense_pool.json"
+VECTORS_PATH = DATA_PATH.parent / "sense_vectors.npz"
 
 _CATEGORY_WEIGHTS = {
     "general": 1.0,
@@ -40,6 +43,27 @@ class SensePool:
         self._pool: list[dict] = []
         self._recent: deque[str] = deque(maxlen=20)
         self._load()
+        self.vectors = embedding.VectorIndex(VECTORS_PATH) if embedding.enabled() else None
+        self._embed_error_logged = False
+
+    def fill_vectors(self) -> int:
+        """给还没有向量的语料补算（启动时和定时任务里调）。"""
+        if not self.vectors:
+            return 0
+        return self.vectors.fill([item.get("text", "") for item in self._pool])
+
+    def _query_scores(self, query: str | None, texts: list[str]) -> dict[str, float]:
+        if not (query and self.vectors and texts):
+            return {}
+        try:
+            q = embedding.embed([query], timeout=5.0)[0]
+        except Exception as err:
+            if not self._embed_error_logged:
+                print(f"🧭 语义匹配失败，退回关键词：{err}")
+                self._embed_error_logged = True
+            return {}
+        self._embed_error_logged = False
+        return self.vectors.scores(q, texts)
 
     def _load(self):
         if DATA_PATH.exists():
@@ -93,10 +117,11 @@ class SensePool:
         return chosen
 
     def pick_many(self, intensity: float, body_parts: set[str] | None = None,
-                  scene: str | None = None, k: int = 3) -> list[str]:
+                  scene: str | None = None, k: int = 3, query: str | None = None) -> list[str]:
         """聊天 / 触碰时抽 k 句身体反应候选。
         只用 general，加上明确在进行的那个 scene：场景类语料写的是"正在发生的事"，乱冒会穿帮。
-        从最贴的条件往下放宽：场景+部位 → 场景 → 部位 → 只看强度。"""
+        从最贴的条件往下放宽：场景+部位 → 场景 → 部位 → 只看强度。
+        有 query 且配了向量时，每一层里按语义相近排序（前几名里再随机，避免老是同一句）；否则随机。"""
         scene = scene if scene in SCENES else None
         tiers = []
         if scene:
@@ -105,11 +130,22 @@ class SensePool:
             tiers.append(({"general"}, body_parts))
         tiers.append(({"general"}, None))
 
+        tier_pools = [self._candidates(intensity, cats, parts) for cats, parts in tiers]
+        scores = self._query_scores(query, list({t for pool in tier_pools for t in pool}))
+
+        def score(t: str) -> float:
+            return scores.get(t, -1.0)
+
         chosen: list[str] = []
-        for cats, parts in tiers:
-            pool = [t for t in self._candidates(intensity, cats, parts) if t not in chosen]
-            random.shuffle(pool)
-            chosen += pool[:k - len(chosen)]
+        for pool in tier_pools:
+            pool = [t for t in pool if t not in chosen]
+            need = k - len(chosen)
+            if scores:
+                top = sorted(pool, key=score, reverse=True)[:max(2 * k, 6)]
+                pool = sorted(random.sample(top, min(need, len(top))), key=score, reverse=True)
+            else:
+                random.shuffle(pool)
+            chosen += pool[:need]
             if len(chosen) >= k:
                 break
 

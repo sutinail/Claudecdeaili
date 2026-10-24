@@ -89,8 +89,22 @@ async def main():
                 print(f"☁️ 天气拉取失败：{err}")
             await asyncio.sleep(30 * 60)
 
+    # ── Corpus vectors: fill on start, then pick up newly added corpus every 10 min ──
+    async def vectors():
+        if not engine.sense_pool.vectors:
+            print("🧭 没配置 SILICONFLOW_API_KEY，语料只用关键词匹配")
+            return
+        while True:
+            try:
+                added = await asyncio.to_thread(engine.sense_pool.fill_vectors)
+                if added:
+                    print(f"🧭 语料向量补算了 {added} 条")
+            except Exception as err:
+                print(f"🧭 语料向量补算失败：{err}")
+            await asyncio.sleep(10 * 60)
+
     print("🫀 脉 · Pulse — API :8300 | MCP :8301", flush=True)
-    await asyncio.gather(api.serve(), mcp_srv.serve(), heartbeat(), weather())
+    await asyncio.gather(api.serve(), mcp_srv.serve(), heartbeat(), weather(), vectors())
 
 
 if __name__ == "__main__":

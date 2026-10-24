@@ -128,9 +128,12 @@ class PulseEngine:
         return _ENV_SCENE.get(env["id"]) if env else None
 
     def _pick_reactions(self, intensity: float, body_parts: set[str] | None = None,
-                        scene: str | None = None):
+                        scene: str | None = None, query: str = ""):
+        scene = scene or self.scene
+        if scene:
+            query = f"{query} {' '.join(_SCENE_KEYWORDS[scene][:2])}"
         self._reactions = self.sense_pool.pick_many(
-            max(0.0, min(1.0, intensity)), body_parts or None, scene or self.scene,
+            max(0.0, min(1.0, intensity)), body_parts or None, scene, query=query.strip(),
         )
 
     # ── Process user message (main entry) ──
@@ -169,7 +172,7 @@ class PulseEngine:
         body_parts = _parts_from_hint(part) if part else _parts_in_text(text)
         if emo in _REACTIVE_EMOTIONS or text_touch >= 0.2 or scene or part:
             intensity = max(senses["touch"], (v["heart_rate"] - 65) / 80)
-            self._pick_reactions(intensity, body_parts, scene)
+            self._pick_reactions(intensity, body_parts, scene, query=f"{text} {part}")
         return v
 
     # ── Touch (MCP tool / ESP32 bear) ──
@@ -201,7 +204,9 @@ class PulseEngine:
 
         if value >= 0.2:
             body_parts = {bp for p in parts for bp in _PART_CORPUS[p]}
-            self._pick_reactions(value, body_parts, scene if scene in SCENES else None)
+            force = "轻轻碰了一下" if value < 0.4 else "摸着" if value < 0.7 else "用力按住"
+            query = f"{'、'.join(_PART_CORPUS[parts[0]][:2]) if parts else '身上'}被她{force}"
+            self._pick_reactions(value, body_parts, scene if scene in SCENES else None, query=query)
         return self.tick()
 
     # ── Bedside actions (shared by HTTP routes and MCP tools) ──

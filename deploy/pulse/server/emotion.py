@@ -14,7 +14,7 @@ _T1_MAP: dict[str, str] = {
     "🤬": "angry",
     "😢": "sad",
     "😭": "sad",
-    "🥺": "sad",
+    "🥺": "shy",  # Timiya 用 🥺 是撒娇，不是难过
     "😱": "startled",
     "😨": "nervous",
     "😰": "nervous",
