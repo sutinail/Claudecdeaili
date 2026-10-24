@@ -10,7 +10,7 @@ from server.mcp_server import create_mcp
 
 
 class HostRewrite:
-    """把任意 Host 头重写为 localhost，绕过 MCP SSE 的 host 校验。"""
+    """MCP 的 DNS rebinding 白名单是 localhost:*，必须带端口；Origin 也会被校验，直接去掉。"""
     def __init__(self, app):
         self.app = app
 
@@ -18,8 +18,8 @@ class HostRewrite:
         if scope["type"] in ("http", "websocket"):
             scope = dict(scope)
             scope["headers"] = [
-                (b"host", b"localhost") if k == b"host" else (k, v)
-                for k, v in scope.get("headers", [])
+                (b"host", b"localhost:8301") if k == b"host" else (k, v)
+                for k, v in scope.get("headers", []) if k != b"origin"
             ]
         await self.app(scope, receive, send)
 
