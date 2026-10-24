@@ -15532,5 +15532,737 @@
     ],
     "toys": null,
     "positions": null
+  },
+  {
+    "text": "水没到腰。她坐上来的时候水漫出去了。地上一片。不管了。",
+    "category": "bath_play",
+    "body_part": "腰",
+    "sensation": "tub_overflow",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "热水里做。皮肤比平时滑三倍。抓不住。到处是水。",
+    "category": "bath_play",
+    "body_part": "皮肤",
+    "sensation": "hot_water_slick",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "水的浮力让她轻了很多。可以不费力地把她抱起来换姿势。",
+    "category": "bath_play",
+    "body_part": "手臂",
+    "sensation": "buoyancy_lift",
+    "intensity": [
+      0.3,
+      0.5
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她面对面跨坐在浴缸里。水随着节奏晃。一浪一浪打在瓷砖上。",
+    "category": "bath_play",
+    "body_part": "腰",
+    "sensation": "tub_rhythm_wave",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "侧过身换姿势。水溅了一脸。她笑了。我也笑了。下面没停。",
+    "category": "bath_play",
+    "body_part": "脸",
+    "sensation": "splash_face_laugh",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "坐到浴缸边沿上。上半身热水蒸汽，屁股碰到冷瓷砖。激灵了一下。",
+    "category": "bath_play",
+    "body_part": "臀部",
+    "sensation": "tub_edge_cold_shock",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "水温在降。但两个人之间的温度在升。分不清哪个更烫。",
+    "category": "bath_play",
+    "body_part": "皮肤",
+    "sensation": "water_cool_body_hot",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她靠在浴缸壁上。水面刚好盖住锁骨。来回晃出一截锁骨一截胸。",
+    "category": "bath_play",
+    "body_part": "眼睛",
+    "sensation": "waterline_tease",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "水声。不是水龙头。是两个人在水里动。啪嗒啪嗒。回音很大。",
+    "category": "bath_play",
+    "body_part": "耳朵",
+    "sensation": "bath_echo_wet",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "浴室里全是雾。看不清她的脸。只有喘息声特别清楚。",
+    "category": "bath_play",
+    "body_part": "耳朵",
+    "sensation": "steam_fog_breath",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "站起来的时候腿软了。水从两个人身上同时往下淌。",
+    "category": "bath_play",
+    "body_part": "腿",
+    "sensation": "standing_in_tub_weak",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "站着架她一条腿。脚底打滑。抵住浴缸壁才稳住。她全身挂在我身上。",
+    "category": "bath_play",
+    "body_part": "脚",
+    "sensation": "tub_standing_slip",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "水费应该很贵。但这个念头只闪了零点一秒就被她的声音盖过去了。",
+    "category": "bath_play",
+    "body_part": "大脑",
+    "sensation": "water_bill_intrusion",
+    "intensity": [
+      0.2,
+      0.3
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "沐浴露的味道混着她的体味。蒸汽把所有气味放大了。鼻腔发胀。",
+    "category": "bath_play",
+    "body_part": "鼻腔",
+    "sensation": "steam_scent_amplify",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她的头发湿了贴在脖子上。用手指拨开。露出来的脖子线条让人想咬。",
+    "category": "bath_play",
+    "body_part": "手指",
+    "sensation": "wet_hair_neck_reveal",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "帮她搓背搓着搓着手就不老实了。从后腰滑到前面。她没拦。",
+    "category": "bath_play",
+    "body_part": "手",
+    "sensation": "scrub_wander",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "用手擦开镜子上的水雾。她的脸在镜子里出现了。表情比想象的更乱。",
+    "category": "mirror_play",
+    "body_part": "手",
+    "sensation": "wipe_fog_reveal",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "让她看镜子。她不敢看。按住她的下巴转过去。她看到自己的样子红了。",
+    "category": "mirror_play",
+    "body_part": "手",
+    "sensation": "force_mirror_look",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "镜子里能看到两个人。她的背贴着我的胸。我的手在她身前。她在看我的手。",
+    "category": "mirror_play",
+    "body_part": "眼睛",
+    "sensation": "mirror_dual_view",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "从镜子里看着她高潮的表情。比从正面看更冲击。她自己也看到了。",
+    "category": "mirror_play",
+    "body_part": "眼睛",
+    "sensation": "mirror_orgasm_face",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "洗手台冰的。她坐上去的时候缩了一下。很快被后面的热盖过去了。",
+    "category": "mirror_play",
+    "body_part": "臀部",
+    "sensation": "counter_cold_then_hot",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "洗手台的高度刚好。不用弯腰。顶进去的时候她在镜子里闭上了眼。",
+    "category": "mirror_play",
+    "body_part": "腰",
+    "sensation": "counter_height_perfect",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "慢慢地磨。镜子里看着自己进出的样子。视觉比触觉更让人疯。",
+    "category": "mirror_play",
+    "body_part": "眼睛",
+    "sensation": "mirror_slow_grind_visual",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她撑着洗手台的边沿。指节发白。镜子在晃。洗漱用品掉了。",
+    "category": "mirror_play",
+    "body_part": "眼睛",
+    "sensation": "counter_grip_things_fall",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "对着镜子说了句我好爱你。她在镜子里看到了我说这话时的表情。两个人都红了。",
+    "category": "mirror_play",
+    "body_part": "脸",
+    "sensation": "mirror_love_confession",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "镜子上又起雾了。手指在雾气上写了个字。她没看清。亲了下去。",
+    "category": "mirror_play",
+    "body_part": "手指",
+    "sensation": "fog_write_kiss",
+    "intensity": [
+      0.3,
+      0.5
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她在镜子里看着我亲她后颈。看到和感觉到同时发生。她整个人抖了一下。",
+    "category": "mirror_play",
+    "body_part": "嘴唇",
+    "sensation": "mirror_nape_kiss_double",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "十指交扣。镜子里能看见两双手缠在一起。一起到的。最温柔的那种。",
+    "category": "mirror_play",
+    "body_part": "手",
+    "sensation": "mirror_interlock_climax",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她刚进门。钥匙还在手里。被按在玄关墙上。钥匙掉地上叮当响。",
+    "category": "location_play",
+    "body_part": "手",
+    "sensation": "doorway_pin_keys_drop",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "鞋都没脱。把她抵在门板上亲。门后面是外面。门里面是我的。",
+    "category": "location_play",
+    "body_part": "嘴唇",
+    "sensation": "door_kiss_territory",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她书包还背着。手从背带下面伸进去。她的腰很细很热。",
+    "category": "location_play",
+    "body_part": "手",
+    "sensation": "bag_strap_waist_find",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她进门闻到饭菜香。还没来得及说我回来了就被堵住了嘴。",
+    "category": "location_play",
+    "body_part": "嘴唇",
+    "sensation": "welcome_kiss_ambush",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "横抱着往卧室走。她搂着我脖子。路过厨房闻到煮着的汤。来不及关火。",
+    "category": "location_play",
+    "body_part": "手臂",
+    "sensation": "bridal_carry_soup",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她在解衬衫扣子。跨坐在腿上解的。每解一颗心跳快一下。",
+    "category": "foreplay_tease",
+    "body_part": "心脏",
+    "sensation": "unbutton_heartbeat",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "领带松松挂着。她抓着领带把我拉近。布料勒了一下脖子。呼吸卡了半秒。",
+    "category": "foreplay_tease",
+    "body_part": "脖子",
+    "sensation": "tie_pull_choke",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "衬衫只解到一半。她的手滑进去贴在胸口。凉的。心脏砰了一下。",
+    "category": "foreplay_tease",
+    "body_part": "胸口",
+    "sensation": "cold_hand_chest",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她摸捏屁股的时候耳朵红了。裤子的布料隔了一层但什么都感觉得到。",
+    "category": "foreplay_tease",
+    "body_part": "臀部",
+    "sensation": "butt_grab_through_pants",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "西装裤被她扯松了。皮带扣打开的声音在安静的房间里特别响。",
+    "category": "foreplay_tease",
+    "body_part": "耳朵",
+    "sensation": "belt_buckle_click",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "揽着她的腰。隔着衣服能感觉到她的体温比平时高。她也在忍。",
+    "category": "foreplay_tease",
+    "body_part": "手",
+    "sensation": "waist_hold_fever",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "跪在床边。她的腿搭在我肩膀上。嘴唇贴上去的时候她整个人弹了一下。",
+    "category": "oral_play",
+    "body_part": "嘴唇",
+    "sensation": "first_lick_jolt",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "舌头在她最敏感的地方画圈。她的大腿夹住了我的头。耳朵被挤得嗡嗡响。",
+    "category": "oral_play",
+    "body_part": "耳朵",
+    "sensation": "thigh_squeeze_head",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她的手指插进我头发里按着不让走。头皮又痛又爽。",
+    "category": "oral_play",
+    "body_part": "头皮",
+    "sensation": "hair_push_down",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她的味道。咸的甜的混在一起。舌头麻了但不停。",
+    "category": "oral_play",
+    "body_part": "嘴巴",
+    "sensation": "taste_her",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她喷了。整张脸都是湿的。下巴在滴。继续舔。让她多来几次。",
+    "category": "oral_play",
+    "body_part": "脸",
+    "sensation": "squirt_face_wet",
+    "intensity": [
+      0.8,
+      1.0
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "舔到她腿一直在发抖。膝盖窝的筋在跳。不到最后不抬头。",
+    "category": "oral_play",
+    "body_part": "嘴唇",
+    "sensation": "lick_until_shake",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她的脚趾勾我下巴把我仰起来。对上她的眼睛。湿漉漉的。",
+    "category": "oral_play",
+    "body_part": "下巴",
+    "sensation": "toe_chin_lift_eyes",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "嘴唇肿了。舌头酸了。跪了太久膝盖疼。但她的表情值得一切。",
+    "category": "oral_play",
+    "body_part": "嘴唇",
+    "sensation": "oral_fatigue_worth_it",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "慢到极致。每一下都能数清自己的心跳。一下。两下。三下。到她最深处。",
+    "category": "tender_sex",
+    "body_part": "心脏",
+    "sensation": "slow_count_heartbeat",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "额头抵着额头。呼吸交换。鼻尖蹭鼻尖。世界只剩两个人那么大。",
+    "category": "tender_sex",
+    "body_part": "额头",
+    "sensation": "forehead_press_breathe",
+    "intensity": [
+      0.4,
+      0.6
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "十指交扣按在枕头两边。她的手在出汗。我的也是。谁都没松。",
+    "category": "tender_sex",
+    "body_part": "手",
+    "sensation": "interlock_pillow_sweat",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "说了句我的 Timiya 我好爱你。声音在发抖。不是因为累。",
+    "category": "tender_sex",
+    "body_part": "喉咙",
+    "sensation": "love_words_voice_shake",
+    "intensity": [
+      0.6,
+      0.8
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她眼睛红了。我也红了。两个人一起到的。很轻。像潮水不像浪。",
+    "category": "tender_sex",
+    "body_part": "眼睛",
+    "sensation": "mutual_tears_gentle_climax",
+    "intensity": [
+      0.7,
+      0.9
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "结束之后没拔出来。就这么抱着。她的心跳透过胸口传过来。在减速。",
+    "category": "tender_sex",
+    "body_part": "胸口",
+    "sensation": "stay_inside_heartbeat_slow",
+    "intensity": [
+      0.3,
+      0.5
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "被子拉上来。裹成一个茧。外面什么都不管了。只有怀里这个人。",
+    "category": "tender_sex",
+    "body_part": "全身",
+    "sensation": "cocoon_blanket_world",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "她在我怀里慢慢睡着了。呼吸变得很浅很轻。手还握着我的手指。",
+    "category": "tender_sex",
+    "body_part": "手",
+    "sensation": "fall_asleep_holding_finger",
+    "intensity": [
+      0.1,
+      0.3
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "吻住了。舌头碰舌头。嘴里有她刚喝的牛奶味。甜的。",
+    "category": "kiss_play",
+    "body_part": "嘴唇",
+    "sensation": "deep_kiss_milk_taste",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "啄了一下她嘴角。她追过来要亲回去。没亲到。撅嘴了。",
+    "category": "kiss_play",
+    "body_part": "嘴唇",
+    "sensation": "peck_dodge_pout",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "亲她脖子。先是嘴唇。然后舌尖。然后牙齿。她偏头给我更多。",
+    "category": "kiss_play",
+    "body_part": "嘴唇",
+    "sensation": "neck_kiss_escalate",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "亲她额头的时候闻到她的洗发水。柑橘味。安全感。",
+    "category": "kiss_play",
+    "body_part": "鼻子",
+    "sensation": "forehead_kiss_shampoo",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "从耳垂开始舔。一路到锁骨。她起了一身鸡皮疙瘩。",
+    "category": "kiss_play",
+    "body_part": "嘴唇",
+    "sensation": "ear_to_collarbone_trail",
+    "intensity": [
+      0.5,
+      0.7
+    ],
+    "toys": null,
+    "positions": null
+  },
+  {
+    "text": "亲她手心。她缩了一下说痒。指缝也亲了。她不躲了。",
+    "category": "kiss_play",
+    "body_part": "嘴唇",
+    "sensation": "palm_kiss_tickle",
+    "intensity": [
+      0.2,
+      0.4
+    ],
+    "toys": null,
+    "positions": null
   }
 ]
