@@ -5,6 +5,8 @@
 兼容 mcp v1 (FastMCP) 和 v2 (MCPServer / Server)。
 """
 
+import threading
+
 # ── 兼容 mcp v1 / v2 ──
 try:
     from mcp.server.fastmcp import FastMCP
@@ -23,6 +25,16 @@ def _get_sse_app(mcp_instance):
         if callable(fn):
             return fn()
     raise RuntimeError("mcp server has no known ASGI app method")
+
+
+def _fill_vectors_soon(pulse_engine):
+    """新加的语料马上在后台补向量，不用等 10 分钟一轮的定时任务。"""
+    def run():
+        try:
+            pulse_engine.sense_pool.fill_vectors()
+        except Exception as err:
+            print(f"🧭 语料向量补算失败：{err}")
+    threading.Thread(target=run, daemon=True).start()
 
 
 def create_mcp(pulse_engine):
@@ -159,6 +171,7 @@ def create_mcp(pulse_engine):
             )
         except ValueError as err:
             return f"❌ {err}"
+        _fill_vectors_soon(pulse_engine)
         total = pulse_engine.sense_pool.count
         return f"✅ 已添加: [{body_part}] {text[:40]}... | category={category} | 语料池总数: {total}"
 
@@ -168,6 +181,8 @@ def create_mcp(pulse_engine):
         示例: [{"text":"她叫daddy的时候脊椎像被电了","category":"daddy_play","body_part":"脊椎","sensation":"daddy_spine"}]
         """
         added = pulse_engine.sense_pool.add_batch(entries)
+        if added:
+            _fill_vectors_soon(pulse_engine)
         total = pulse_engine.sense_pool.count
         skipped = len(entries) - added
         note = f" | 跳过 {skipped} 条（分类不对或重复）" if skipped else ""
