@@ -8,6 +8,8 @@ RUN pip install --no-cache-dir \
     --trusted-host mirrors.cloud.tencent.com \
     -r requirements.txt
 
+ENV PYTHONUNBUFFERED=1
+
 COPY . .
 
 EXPOSE 8300 8301
