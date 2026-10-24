@@ -38,8 +38,64 @@ _PART_CORPUS = {
     "foot":   ["脚", "脚趾", "小腿", "膝盖"],
 }
 
-# 聊天时这些情绪出现，才从语料池里抽一句身体反应
+# 聊天时这些情绪出现，才从语料池里抽身体反应
 _REACTIVE_EMOTIONS = {"touched", "intimate", "aroused", "shy", "excited", "startled", "nervous"}
+
+# 话里提到的部位 → 语料池 body_part（长词先匹配）
+_PART_KEYWORDS = {
+    "嘴唇": ["嘴唇", "嘴"], "嘴": ["嘴唇", "嘴", "嘴巴"], "舌": ["嘴", "嘴唇", "喉咙"],
+    "耳": ["耳朵"], "脖子": ["脖子"], "锁骨": ["脖子", "胸口"], "喉": ["喉咙"],
+    "脸": ["脸", "下巴"], "眼": ["眼睛"], "额头": ["额头"], "头发": ["头", "头皮"],
+    "胸": ["胸口", "胸", "乳头"], "奶": ["胸", "乳头"], "心口": ["心脏", "胸口"], "心跳": ["心脏"],
+    "腰": ["腰", "后腰"], "背": ["背部", "背", "脊椎"], "肩": ["肩膀"],
+    "肚子": ["小腹", "肚子", "腹肌"], "小腹": ["小腹"], "腹肌": ["腹肌"],
+    "手": ["手", "手指", "手心", "手臂"], "指": ["手指"],
+    "大腿": ["大腿", "大腿内侧"], "腿": ["大腿", "腿", "小腿", "膝盖"],
+    "屁股": ["臀部"], "臀": ["臀部"], "脚": ["脚", "脚趾"],
+}
+
+# 话里出现这些词，就认为是在这个场景里
+_SCENE_KEYWORDS = {
+    "bath_play":      ["浴室", "洗澡", "泡澡", "浴缸", "淋浴", "花洒"],
+    "mirror_play":    ["镜子", "镜前", "照镜"],
+    "daddy_play":     ["daddy", "爹地"],
+    "oral_play":      ["口交", "含住", "含着", "深喉"],
+    "kiss_play":      ["接吻", "亲嘴", "舌吻", "吻你", "吻我"],
+    "foreplay_tease": ["前戏", "挑逗", "解扣子", "脱衣服", "扯领带"],
+    "tender_sex":     ["慢慢做", "温柔地做", "温柔一点做"],
+    "location_play":  ["车里", "野外", "阳台", "办公室", "楼梯间"],
+}
+
+
+def _parts_from_hint(hint: str) -> set[str]:
+    """part 参数可以是 touch 部位 id、语料里的部位名，或者一句话里的部位词。"""
+    if hint in _PART_CORPUS:
+        return set(_PART_CORPUS[hint])
+    found = _parts_in_text(hint)
+    return found or {hint}
+
+
+_PART_STOPWORDS = ["手机", "耳机", "眼泪", "背景", "背书", "指望", "指导", "腰包", "奶茶", "牛奶", "脸书"]
+
+
+def _parts_in_text(text: str) -> set[str]:
+    found: set[str] = set()
+    remaining = text
+    for word in _PART_STOPWORDS:
+        remaining = remaining.replace(word, "\0")
+    for word in sorted(_PART_KEYWORDS, key=len, reverse=True):
+        if word in remaining:
+            found.update(_PART_KEYWORDS[word])
+            remaining = remaining.replace(word, "\0")
+    return found
+
+
+def _scene_in_text(text: str) -> str | None:
+    lowered = text.lower()
+    for scene, words in _SCENE_KEYWORDS.items():
+        if any(w in lowered for w in words):
+            return scene
+    return None
 
 
 class PulseEngine:
@@ -61,7 +117,7 @@ class PulseEngine:
         self.random_events = RandomEventSystem()
 
         self._last_tick = time.time()
-        self._reaction: str | None = None
+        self._reactions: list[str] = []
         self._scene: str | None = None
 
     @property
@@ -71,16 +127,17 @@ class PulseEngine:
         env = self.env.get_active()
         return _ENV_SCENE.get(env["id"]) if env else None
 
-    def _pick_reaction(self, intensity: float, parts: list[str] | None = None):
-        body_parts = None
-        if parts:
-            body_parts = {bp for p in parts for bp in _PART_CORPUS.get(p, [])}
-        self._reaction = self.sense_pool.pick(intensity, body_parts)
+    def _pick_reactions(self, intensity: float, body_parts: set[str] | None = None,
+                        scene: str | None = None):
+        self._reactions = self.sense_pool.pick_many(
+            max(0.0, min(1.0, intensity)), body_parts or None, scene or self.scene,
+        )
 
     # ── Process user message (main entry) ──
 
-    def on_message(self, text: str) -> dict:
-        """用户发一句话 → 情绪检测 → 全链路联动。"""
+    def on_message(self, text: str, scene: str = "", part: str = "") -> dict:
+        """用户发一句话 → 情绪检测 → 全链路联动。
+        scene / part 是调用方（我）根据整段对话给的提示；不给就从这句话里自己认。"""
 
         # 1. emotion detection
         emo = detect_emotion(text)
@@ -107,15 +164,17 @@ class PulseEngine:
         # 4. compute vitals
         v = self.tick()
 
-        # 5. body reaction from corpus when something actually stirred
-        if emo in _REACTIVE_EMOTIONS or text_touch >= 0.2:
+        # 5. body reaction candidates when something actually stirred
+        scene = scene if scene in SCENES else _scene_in_text(text)
+        body_parts = _parts_from_hint(part) if part else _parts_in_text(text)
+        if emo in _REACTIVE_EMOTIONS or text_touch >= 0.2 or scene or part:
             intensity = max(senses["touch"], (v["heart_rate"] - 65) / 80)
-            self._pick_reaction(max(0.0, min(1.0, intensity)))
+            self._pick_reactions(intensity, body_parts, scene)
         return v
 
     # ── Touch (MCP tool / ESP32 bear) ──
 
-    def on_touch(self, value: float, parts: list[str] | None = None) -> dict:
+    def on_touch(self, value: float, parts: list[str] | None = None, scene: str = "") -> dict:
         """触碰 → 触觉 + 心跳尖峰 + 情绪 + 亲密驱动。value 已经是最终力度，这里不再按部位加权。"""
         value = max(0.0, min(1.0, value))
         parts = [p for p in (parts or []) if p in TOUCH_PARTS]
@@ -141,7 +200,8 @@ class PulseEngine:
             self.emo_memory.on_emotion(emo)
 
         if value >= 0.2:
-            self._pick_reaction(value, parts)
+            body_parts = {bp for p in parts for bp in _PART_CORPUS[p]}
+            self._pick_reactions(value, body_parts, scene if scene in SCENES else None)
         return self.tick()
 
     # ── Bedside actions (shared by HTTP routes and MCP tools) ──
@@ -191,7 +251,7 @@ class PulseEngine:
                                          scene=self.scene)
         if reaction:
             result["body_reaction"] = reaction
-            self._reaction = reaction
+            self._reactions = [reaction]
             self.murmurs.add_body_reaction(reaction, stage=stage.get("idx"), toy_id=toy_id)
 
         self.fantasy.sync_stage(stage.get("idx", 0))
@@ -330,10 +390,13 @@ class PulseEngine:
             if fantasy:
                 line += f"\n{fantasy}"
 
-        # one-shot body reaction picked by the last sense/touch/toy step
-        if self._reaction:
-            line += f"\n「身体」{self._reaction}"
-            self._reaction = None
+        # one-shot body reactions picked by the last sense/touch/toy step
+        if len(self._reactions) == 1:
+            line += f"\n「身体」{self._reactions[0]}"
+        elif self._reactions:
+            line += "\n「身体·候选」挑最贴的一句用，或顺着改写：\n"
+            line += "\n".join(f"- {r}" for r in self._reactions)
+        self._reactions = []
 
         return line
 

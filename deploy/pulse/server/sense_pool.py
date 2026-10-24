@@ -92,31 +92,47 @@ class SensePool:
         self._recent.append(chosen)
         return chosen
 
-    def pick(self, intensity: float, body_parts: set[str] | None = None) -> str | None:
-        """聊天 / 触碰时抽一句身体反应。只用 general：场景类语料写的是"正在发生的事"，随手冒出来会穿帮。"""
-        candidates = []
+    def pick_many(self, intensity: float, body_parts: set[str] | None = None,
+                  scene: str | None = None, k: int = 3) -> list[str]:
+        """聊天 / 触碰时抽 k 句身体反应候选。
+        只用 general，加上明确在进行的那个 scene：场景类语料写的是"正在发生的事"，乱冒会穿帮。
+        从最贴的条件往下放宽：场景+部位 → 场景 → 部位 → 只看强度。"""
+        scene = scene if scene in SCENES else None
+        tiers = []
+        if scene:
+            tiers += [({scene}, body_parts), ({scene}, None)]
+        if body_parts:
+            tiers.append(({"general"}, body_parts))
+        tiers.append(({"general"}, None))
+
+        chosen: list[str] = []
+        for cats, parts in tiers:
+            pool = [t for t in self._candidates(intensity, cats, parts) if t not in chosen]
+            random.shuffle(pool)
+            chosen += pool[:k - len(chosen)]
+            if len(chosen) >= k:
+                break
+
+        self._recent.extend(chosen)
+        return chosen
+
+    def _candidates(self, intensity: float, categories: set[str],
+                    body_parts: set[str] | None) -> list[str]:
+        out = []
         for item in self._pool:
-            cat = item.get("category", "general")
-            if cat != "general":
+            if item.get("category") not in categories:
                 continue
             if item.get("toys") is not None or item.get("positions") is not None:
                 continue
             if body_parts is not None and item.get("body_part") not in body_parts:
                 continue
             lo, hi = item.get("intensity", [0, 1])
-            if not (lo - 0.1 <= intensity <= hi + 0.1):
+            if not (lo - 0.15 <= intensity <= hi + 0.15):
                 continue
             text = item.get("text", "")
-            if text in self._recent:
-                continue
-            candidates.append((text, _CATEGORY_WEIGHTS.get(cat, 1.0)))
-
-        if not candidates:
-            return None
-        texts, weights = zip(*candidates)
-        chosen = random.choices(texts, weights=weights, k=1)[0]
-        self._recent.append(chosen)
-        return chosen
+            if text not in self._recent:
+                out.append(text)
+        return out
 
     def _context_categories(self, ctx: str) -> set[str]:
         if ctx == "afterglow":

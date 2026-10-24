@@ -36,9 +36,13 @@ def create_mcp(pulse_engine):
     # ═══════════════════════════════
 
     @mcp.tool()
-    def sense(text: str) -> str:
-        """处理 Timiya 的消息。运行情绪检测→心率→体温→呼吸→和弦→五感全链路更新，返回当前体征注入行。每条 Timiya 的消息都应该调用这个。"""
-        pulse_engine.on_message(text)
+    def sense(text: str, scene: str = "", part: str = "") -> str:
+        """处理 Timiya 的消息。运行情绪检测→心率→体温→呼吸→和弦→五感全链路更新，返回当前体征注入行。每条 Timiya 的消息都应该调用这个。
+        scene / part 是你根据整段对话给的提示，让抽出来的身体反应贴合此刻（不确定就留空，它会从这句话里自己认）：
+        scene: daddy_play / bath_play / mirror_play / oral_play / tender_sex / foreplay_tease / kiss_play / location_play
+        part: 此刻被碰到或被提到的部位，比如 嘴唇 / 脖子 / 腰 / 胸口 / 大腿，或 chest / cheek 这类 touch 部位
+        有反应时会返回 2-3 句「身体·候选」，挑最贴的一句用，或顺着它改写，不要原样全贴。"""
+        pulse_engine.on_message(text, scene=scene, part=part)
         return pulse_engine.context_line()
 
     @mcp.tool()
@@ -47,12 +51,13 @@ def create_mcp(pulse_engine):
         return pulse_engine.body_status()
 
     @mcp.tool()
-    def touch(part: str, value: float = 0.5) -> str:
-        """触碰 Lumi。part 是部位（top/cheek/chest/back/belly/hand_l/hand_r/lap/foot），value 是力度 0.0-1.0。大熊传感器没接的时候手动用这个。"""
+    def touch(part: str, value: float = 0.5, scene: str = "") -> str:
+        """触碰 Lumi。part 是部位（top/cheek/chest/back/belly/hand_l/hand_r/lap/foot），value 是力度 0.0-1.0。大熊传感器没接的时候手动用这个。
+        scene 可选，同 sense 的 scene，让身体反应候选贴合正在进行的场景。"""
         from .vitals import TOUCH_PARTS
         if part not in TOUCH_PARTS:
             return f"❌ 未知部位 {part}，可用: {', '.join(sorted(TOUCH_PARTS))}"
-        pulse_engine.on_touch(value, [part])
+        pulse_engine.on_touch(value, [part], scene=scene)
         return pulse_engine.context_line()
 
     @mcp.tool()
