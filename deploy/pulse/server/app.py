@@ -68,10 +68,13 @@ app.add_middleware(
 
 # ── Auth middleware ──
 
+_PUBLIC_PATHS = ("/health", "/", "/mcp", "/docs", "/openapi.json")
+
 @app.middleware("http")
 async def check_secret(request: Request, call_next):
-    # MCP connector has its own auth via Cloudflare tunnel
-    if request.url.path.startswith("/mcp"):
+    path = request.url.path
+    # public endpoints: health, root, MCP, docs
+    if path in _PUBLIC_PATHS or path.startswith("/mcp"):
         return await call_next(request)
     if SECRET:
         token = request.headers.get("X-Pulse-Secret", "")
