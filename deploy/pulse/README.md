@@ -147,10 +147,24 @@ sudo docker run -d --name cloudflared --restart unless-stopped \
 
 所有 API 请求头带 `X-Pulse-Secret: <你的密钥>`。
 
+## 现在服务器上的样子（2026-10-24 起）
+
+- 代码：`/opt/claudecdeaili`（GitHub 部署密钥 `~/.ssh/claudecdeaili`，只读，走 `ssh.github.com:443`，`~/.ssh/config` 里的 Host 叫 `github-claudecdeaili`）
+- 运行目录：`/opt/claudecdeaili/deploy/pulse`，`.env` 在这里（不进 git）
+- 实时数据：`/opt/pulse/data`（语料池、心率历史），由 `.env` 里的 `PULSE_DATA_DIR` 挂进容器。旧目录 `/opt/pulse` 只剩这份数据和旧代码备份，别删
+- 端口：API `:8300`（`pulse.gpt1126.top`），MCP `:8301`（`pulse-mcp.gpt1126.top`）
+- Cloudflare 隧道配置：`/opt/ombre-brain/cloudflared/config.yml`，cloudflared 容器 `051894cd4498`
+- claude.ai 连接器地址：`https://pulse-mcp.gpt1126.top/sse?key=<PULSE_MCP_KEY>`
+
+> 网页终端（OrcaTerm）一次粘贴多行会在第一行前面塞 `^[[200~`，第一条命令就会失败。命令尽量写成一行、一条一条贴。
+
 ## 日常维护
 
 ```bash
-cd /opt/pulse
+# 更新：拉最新代码 → 重建 → 看日志
+/opt/claudecdeaili/deploy/pulse/update.sh
+
+cd /opt/claudecdeaili/deploy/pulse
 
 # 看日志
 sudo docker compose logs -f --tail 100
@@ -158,18 +172,27 @@ sudo docker compose logs -f --tail 100
 # 重启
 sudo docker compose restart
 
-# 更新（重新拉代码后）
-sudo docker compose up -d --build
-
-# 查看密钥
-sudo grep PULSE_SECRET /opt/pulse/.env
+# 查看密钥（别截图）
+grep PULSE_SECRET .env
 ```
 
 ### 密钥泄露了怎么换
 
 ```bash
-cd /opt/pulse && sudo sed -i "s/^PULSE_SECRET=.*/PULSE_SECRET=$(openssl rand -base64 48 | tr -dc A-Za-z0-9 | head -c 32)/" .env && sudo docker compose up -d --force-recreate
+cd /opt/claudecdeaili/deploy/pulse && sed -i "s/^PULSE_SECRET=.*/PULSE_SECRET=$(openssl rand -base64 48 | tr -dc A-Za-z0-9 | head -c 32)/" .env && sudo docker compose up -d --force-recreate
 ```
+
+MCP 密码泄露了：换完要去 claude.ai 连接器里把地址里的 `key=` 也改掉。
+
+```bash
+cd /opt/claudecdeaili/deploy/pulse && sed -i "s/^PULSE_MCP_KEY=.*/PULSE_MCP_KEY=$(openssl rand -hex 16)/" .env && sudo docker compose up -d --force-recreate
+```
+
+### MCP 踩过的坑
+
+- MCP 挂在 FastAPI 的 `/mcp` 下面，经过 Cloudflare 会报 `421 Invalid Host header`，所以 MCP 单独跑在 8301
+- mcp 库的 DNS rebinding 白名单是 `localhost:*`，Host **必须带端口**；`start.py` 里的 `McpGate` 把 Host 改写成 `localhost:8301`，并去掉 Origin 头
+- cloudflared 的 `httpHostHeader: "localhost"` 没用（同样少了端口）
 
 ## 后续计划
 
