@@ -9,34 +9,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from starlette.routing import Mount
-
 from .vitals import PulseEngine
 from .routes.bedside import router as bedside_router
-
-try:
-    from .mcp_server import create_mcp
-    _HAS_MCP = True
-except Exception:
-    _HAS_MCP = False
-    create_mcp = None
 
 SECRET = os.getenv("PULSE_SECRET", "")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    engine = PulseEngine()
-    app.state.pulse = engine
-
-    # mount MCP connector (optional — skipped if mcp package unavailable)
-    if _HAS_MCP:
-        mcp = create_mcp(engine)
-        try:
-            sse_app = create_mcp.get_sse_app(mcp)
-        except Exception:
-            sse_app = mcp.sse_app()
-        app.routes.append(Mount("/mcp", app=sse_app))
+    # start.py pre-sets app.state.pulse with shared engine
+    if hasattr(app.state, "pulse") and app.state.pulse is not None:
+        engine = app.state.pulse
+    else:
+        engine = PulseEngine()
+        app.state.pulse = engine
 
     # background heartbeat: tick every 8 seconds
     async def heartbeat():

@@ -7,6 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8300
+EXPOSE 8300 8301
 
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8300"]
+CMD ["python", "start.py"]
