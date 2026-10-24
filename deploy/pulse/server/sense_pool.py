@@ -82,6 +82,32 @@ class SensePool:
         self._recent.append(chosen)
         return chosen
 
+    def pick(self, intensity: float, body_parts: set[str] | None = None) -> str | None:
+        """聊天 / 触碰时抽一句身体反应。只用 general：场景类语料写的是"正在发生的事"，随手冒出来会穿帮。"""
+        candidates = []
+        for item in self._pool:
+            cat = item.get("category", "general")
+            if cat != "general":
+                continue
+            if item.get("toys") is not None or item.get("positions") is not None:
+                continue
+            if body_parts is not None and item.get("body_part") not in body_parts:
+                continue
+            lo, hi = item.get("intensity", [0, 1])
+            if not (lo - 0.1 <= intensity <= hi + 0.1):
+                continue
+            text = item.get("text", "")
+            if text in self._recent:
+                continue
+            candidates.append((text, _CATEGORY_WEIGHTS.get(cat, 1.0)))
+
+        if not candidates:
+            return None
+        texts, weights = zip(*candidates)
+        chosen = random.choices(texts, weights=weights, k=1)[0]
+        self._recent.append(chosen)
+        return chosen
+
     def _context_categories(self, ctx: str) -> set[str]:
         if ctx == "afterglow":
             return {"afterglow"}
@@ -97,6 +123,10 @@ class SensePool:
             intensity_max: float = 0.7,
             toys: list[str] | None = None,
             positions: list[str] | None = None) -> dict:
+        if category not in _CATEGORY_WEIGHTS:
+            raise ValueError(f"未知分类 {category}，可用: {', '.join(_CATEGORY_WEIGHTS)}")
+        if any(item.get("text") == text for item in self._pool):
+            raise ValueError("这句已经在语料池里了")
         entry = {
             "text": text,
             "category": category,
@@ -112,9 +142,13 @@ class SensePool:
 
     def add_batch(self, entries: list[dict]) -> int:
         added = 0
+        existing = {item.get("text") for item in self._pool}
         for e in entries:
-            if "text" not in e or "category" not in e:
+            if "text" not in e or e.get("category") not in _CATEGORY_WEIGHTS:
                 continue
+            if e["text"] in existing:
+                continue
+            existing.add(e["text"])
             self._pool.append({
                 "text": e["text"],
                 "category": e.get("category", "general"),

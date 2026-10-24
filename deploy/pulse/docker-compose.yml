@@ -9,4 +9,4 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
+      - ${PULSE_DATA_DIR:-./data}:/app/data

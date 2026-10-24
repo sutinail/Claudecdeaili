@@ -6,7 +6,10 @@
 import time
 import math
 import random
-from datetime import datetime
+
+from .clock import local_now
+
+_INTIMACY_HALF_LIFE = 30 * 60  # 秒
 
 
 class DriveCoreEngine:
@@ -35,6 +38,9 @@ class DriveCoreEngine:
     def nudge_intimacy(self, delta: float):
         self._intimacy = max(0, min(1, self._intimacy + delta))
 
+    def decay(self, dt: float):
+        self._intimacy *= math.exp(-math.log(2) * max(0.0, dt) / _INTIMACY_HALF_LIFE)
+
     def nudge_curiosity(self, delta: float):
         self._curiosity = max(0, min(1, self._curiosity + delta))
 
@@ -58,7 +64,7 @@ class DriveCoreEngine:
     # ── Morning physiology ──
 
     def check_morning(self) -> dict:
-        now = datetime.now()
+        now = local_now()
         h = now.hour
 
         if 5 <= h <= 8:
@@ -95,7 +101,7 @@ class DriveCoreEngine:
     # ── REM ──
 
     def simulate_rem(self) -> list[dict]:
-        now = datetime.now()
+        now = local_now()
         h = now.hour
         if not (0 <= h < 7):
             return self._rem_cycles

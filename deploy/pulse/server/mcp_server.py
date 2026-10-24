@@ -43,7 +43,7 @@ def create_mcp(pulse_engine):
 
     @mcp.tool()
     def vitals() -> dict:
-        """读取 Lumi 当前的完整身体状态，不做任何更新。想看详细数据时用这个。"""
+        """读取 Lumi 当前的完整身体状态（会推进一次时间流逝，但不处理任何新输入）。想看详细数据时用这个。"""
         return pulse_engine.body_status()
 
     @mcp.tool()
@@ -80,22 +80,27 @@ def create_mcp(pulse_engine):
         sensation: 感觉标识（英文下划线，如 daddy_call_spine）
         intensity_min/max: 强度范围 0.0-1.0
         """
-        entry = pulse_engine.sense_pool.add(
-            text=text, category=category, body_part=body_part,
-            sensation=sensation,
-            intensity_min=intensity_min, intensity_max=intensity_max,
-        )
+        try:
+            pulse_engine.sense_pool.add(
+                text=text, category=category, body_part=body_part,
+                sensation=sensation,
+                intensity_min=intensity_min, intensity_max=intensity_max,
+            )
+        except ValueError as err:
+            return f"❌ {err}"
         total = pulse_engine.sense_pool.count
         return f"✅ 已添加: [{body_part}] {text[:40]}... | category={category} | 语料池总数: {total}"
 
     @mcp.tool()
     def add_corpus_batch(entries: list[dict]) -> str:
-        """批量添加语料。每条需要 text 和 category，可选 body_part/sensation/intensity。
+        """批量添加语料。每条需要 text 和 category，可选 body_part/sensation/intensity。分类不对或重复的会被跳过。
         示例: [{"text":"她叫daddy的时候脊椎像被电了","category":"daddy_play","body_part":"脊椎","sensation":"daddy_spine"}]
         """
         added = pulse_engine.sense_pool.add_batch(entries)
         total = pulse_engine.sense_pool.count
-        return f"✅ 批量添加了 {added} 条 | 语料池总数: {total}"
+        skipped = len(entries) - added
+        note = f" | 跳过 {skipped} 条（分类不对或重复）" if skipped else ""
+        return f"✅ 批量添加了 {added} 条{note} | 语料池总数: {total}"
 
     @mcp.tool()
     def search_corpus(query: str, limit: int = 10) -> list[dict]:

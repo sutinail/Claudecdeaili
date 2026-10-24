@@ -4,17 +4,32 @@
 """
 
 import asyncio
+import hmac
+import os
+from urllib.parse import parse_qs
+
 import uvicorn
 from server.vitals import PulseEngine
 from server.mcp_server import create_mcp
 
+MCP_KEY = os.getenv("PULSE_MCP_KEY", "")
 
-class HostRewrite:
-    """MCP 的 DNS rebinding 白名单是 localhost:*，必须带端口；Origin 也会被校验，直接去掉。"""
+
+class McpGate:
+    """/sse 必须带 ?key=PULSE_MCP_KEY；/messages 只认 /sse 发出的随机 session_id，不另验。
+    MCP 的 DNS rebinding 白名单是 localhost:*，Host 必须带端口；Origin 也会被校验，直接去掉。"""
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and MCP_KEY and scope["path"].rstrip("/") == "/sse":
+            query = parse_qs(scope.get("query_string", b"").decode())
+            key = query.get("key", [""])[0]
+            if not hmac.compare_digest(key.encode(), MCP_KEY.encode()):
+                await send({"type": "http.response.start", "status": 401,
+                            "headers": [(b"content-type", b"text/plain")]})
+                await send({"type": "http.response.body", "body": b"unauthorized"})
+                return
         if scope["type"] in ("http", "websocket"):
             scope = dict(scope)
             scope["headers"] = [
@@ -42,7 +57,9 @@ async def main():
     except Exception:
         mcp_app = mcp.sse_app()
 
-    mcp_app = HostRewrite(mcp_app)
+    mcp_app = McpGate(mcp_app)
+    if not MCP_KEY:
+        print("⚠️ PULSE_MCP_KEY 没设，MCP 现在谁都能连")
 
     mcp_srv = uvicorn.Server(uvicorn.Config(
         mcp_app, host="0.0.0.0", port=8301, log_level="info",

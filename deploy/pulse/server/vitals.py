@@ -22,6 +22,22 @@ TOUCH_PARTS = {"top", "cheek", "chest", "back", "belly", "hand_l", "hand_r", "la
 _INTIMATE_PARTS = {"chest", "belly", "lap"}
 _TOUCH_EMO_RANK = {"touched": 1, "intimate": 2, "aroused": 3}
 
+# touch 部位 → 语料池里的 body_part 名字
+_PART_CORPUS = {
+    "top":    ["头", "头皮", "后脑勺", "额头", "鬓角"],
+    "cheek":  ["脸", "下巴", "嘴唇", "耳朵", "太阳穴"],
+    "chest":  ["胸口", "胸", "乳头", "心脏", "呼吸"],
+    "back":   ["背部", "背", "脊椎", "肩胛骨", "后腰", "肩膀"],
+    "belly":  ["小腹", "腹肌", "肚子", "腰"],
+    "hand_l": ["手", "手指", "手心", "手臂"],
+    "hand_r": ["手", "手指", "手心", "手臂"],
+    "lap":    ["大腿", "大腿内侧", "性器", "骨盆", "胯", "臀部"],
+    "foot":   ["脚", "脚趾", "小腿", "膝盖"],
+}
+
+# 聊天时这些情绪出现，才从语料池里抽一句身体反应
+_REACTIVE_EMOTIONS = {"touched", "intimate", "aroused", "shy", "excited", "startled", "nervous"}
+
 
 class PulseEngine:
     """一脉相连：从心跳到指尖。"""
@@ -42,6 +58,13 @@ class PulseEngine:
         self.random_events = RandomEventSystem()
 
         self._last_tick = time.time()
+        self._reaction: str | None = None
+
+    def _pick_reaction(self, intensity: float, parts: list[str] | None = None):
+        body_parts = None
+        if parts:
+            body_parts = {bp for p in parts for bp in _PART_CORPUS.get(p, [])}
+        self._reaction = self.sense_pool.pick(intensity, body_parts)
 
     # ── Process user message (main entry) ──
 
@@ -55,6 +78,7 @@ class PulseEngine:
             self.emo_memory.on_emotion(emo)
 
         # 2. sensory update from text
+        touch_before = self.sensory.read(position=self.bedside.position)["touch"]
         self.sensory.update_from_text(text)
 
         # 3. touch >= 0.5 → aroused
@@ -67,7 +91,14 @@ class PulseEngine:
             self.drive.nudge_intimacy(0.1)
 
         # 4. compute vitals
-        return self.tick()
+        v = self.tick()
+
+        # 5. body reaction from corpus when something actually stirred
+        touched_by_text = senses["touch"] - touch_before >= 0.2
+        if emo in _REACTIVE_EMOTIONS or touched_by_text:
+            intensity = max(senses["touch"], (v["heart_rate"] - 65) / 80)
+            self._pick_reaction(max(0.0, min(1.0, intensity)))
+        return v
 
     # ── Touch (MCP tool / ESP32 bear) ──
 
@@ -96,6 +127,8 @@ class PulseEngine:
             self.hr.set_emotion(emo)
             self.emo_memory.on_emotion(emo)
 
+        if value >= 0.2:
+            self._pick_reaction(value, parts)
         return self.tick()
 
     # ── Tick (compute all vitals) ──
@@ -110,11 +143,12 @@ class PulseEngine:
         self.temp.set_toy_override(temp_override)
 
         # drive → hr
+        self.drive.decay(now - self._last_tick)
         drives = self.drive.get_drives()
         self.hr.set_drive(intimacy=drives["intimacy"], fatigue=drives["fatigue"])
 
         # emotion memory → hr
-        undertone_delta = self.emo_memory.hr_delta()
+        self.hr.set_undertone(self.emo_memory.hr_delta())
 
         # morning
         morning = self.drive.check_morning()
@@ -185,6 +219,11 @@ class PulseEngine:
             parts.append(f"底色·{ut['emotion']}({ut['strength']})")
 
         line = f"[{'·'.join(parts)}]"
+
+        # one-shot body reaction picked by the last sense/touch
+        if self._reaction:
+            line += f"\n「身体」{self._reaction}"
+            self._reaction = None
 
         # toy-use-wake: add full sensory + stage info
         if v["toy"]["active"]:

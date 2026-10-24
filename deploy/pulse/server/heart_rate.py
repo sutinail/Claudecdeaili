@@ -8,8 +8,9 @@ import math
 import random
 import json
 import os
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+from .clock import local_now
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "life" / "hr_history"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -40,7 +41,7 @@ _noise = PerlinNoise1D()
 # ── Time-based base HR ──
 
 def _time_period() -> str:
-    h = datetime.now().hour
+    h = local_now().hour
     if 0 <= h < 5:
         return "deep_sleep"
     elif 5 <= h < 7:
@@ -84,6 +85,24 @@ _EMO_DELTAS = {
     "touched":   10,
 }
 
+# 情绪持续多久（秒）没有被再次触发就回落到 neutral；之后由情绪底色慢慢收尾
+_EMO_HOLD = {
+    "startled":  60,
+    "nervous":  300,
+    "shy":      300,
+    "happy":    600,
+    "excited":  600,
+    "touched":  600,
+    "focused":  900,
+    "scolded":  900,
+    "angry":    900,
+    "aroused":  900,
+    "sad":     1200,
+    "intimate":1200,
+}
+
+_EMO_SMOOTH_TAU = 20.0  # 秒，情绪对心率的影响按时间平滑，不再取决于调用频率
+
 
 # ── Main HR Engine ──
 
@@ -92,7 +111,8 @@ class HeartRateEngine:
         self._emotion: str = "neutral"
         self._emo_delta: float = 0.0
         self._emo_target: float = 0.0
-        self._ema_alpha: float = 0.15
+        self._emotion_ts: float = time.time()
+        self._undertone_delta: float = 0.0
 
         self._drive_intimacy: float = 0.0
         self._drive_fatigue: float = 0.0
@@ -127,6 +147,10 @@ class HeartRateEngine:
         if emo in _EMO_DELTAS:
             self._emotion = emo
             self._emo_target = _EMO_DELTAS[emo]
+            self._emotion_ts = time.time()
+
+    def set_undertone(self, delta: float):
+        self._undertone_delta = delta
 
     def set_drive(self, intimacy: float = 0.0, fatigue: float = 0.0):
         self._drive_intimacy = max(0, min(1, intimacy))
@@ -157,8 +181,15 @@ class HeartRateEngine:
         if self._toy_override_hr is not None:
             return max(48, min(160, self._toy_override_hr))
 
-        # EMA smooth emotion delta
-        self._emo_delta += self._ema_alpha * (self._emo_target - self._emo_delta)
+        # emotion fades back to neutral after its hold time
+        hold = _EMO_HOLD.get(self._emotion)
+        if hold is not None and now - self._emotion_ts > hold:
+            self._emotion = "neutral"
+            self._emo_target = 0.0
+
+        # time-based smoothing of emotion delta
+        alpha = 1.0 - math.exp(-max(0.0, dt) / _EMO_SMOOTH_TAU)
+        self._emo_delta += alpha * (self._emo_target - self._emo_delta)
 
         # drive delta
         d_drive = self._drive_intimacy * 8 - self._drive_fatigue * 5
@@ -188,7 +219,7 @@ class HeartRateEngine:
         noise_val = _noise(now * 0.05) * 3.0
 
         base = _base_hr()
-        raw = base + self._emo_delta + d_drive + d_weather + d_spike + d_morning + d_position + noise_val
+        raw = base + self._emo_delta + self._undertone_delta + d_drive + d_weather + d_spike + d_morning + d_position + noise_val
         hr = max(48, min(160, raw))
 
         self._record(hr)
@@ -212,7 +243,7 @@ class HeartRateEngine:
     def flush_history(self):
         if not self._history:
             return
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = local_now().strftime("%Y-%m-%d")
         path = DATA_DIR / f"{today}.jsonl"
         with open(path, "a") as f:
             for entry in self._history:
