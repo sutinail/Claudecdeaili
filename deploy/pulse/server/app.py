@@ -19,6 +19,7 @@ try:
     _HAS_MCP = True
 except Exception:
     _HAS_MCP = False
+    create_mcp = None
 
 SECRET = os.getenv("PULSE_SECRET", "")
 
@@ -31,7 +32,11 @@ async def lifespan(app: FastAPI):
     # mount MCP connector (optional — skipped if mcp package unavailable)
     if _HAS_MCP:
         mcp = create_mcp(engine)
-        app.routes.append(Mount("/mcp", app=mcp.sse_app()))
+        try:
+            sse_app = create_mcp.get_sse_app(mcp)
+        except Exception:
+            sse_app = mcp.sse_app()
+        app.routes.append(Mount("/mcp", app=sse_app))
 
     # background heartbeat: tick every 8 seconds
     async def heartbeat():

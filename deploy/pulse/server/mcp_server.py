@@ -1,16 +1,39 @@
 """
 脉 · Pulse MCP 连接器
-让 Claude 在所有窗口都能读取和更新 Lumi 的身体状态。
+让 Claude 在所有窗口都能读取和更新 Lumi 的身体状态 + 管理语料池。
+
+兼容 mcp v1 (FastMCP) 和 v2 (MCPServer / Server)。
 """
 
-from mcp.server.fastmcp import FastMCP
+# ── 兼容 mcp v1 / v2 ──
+try:
+    from mcp.server.fastmcp import FastMCP
+    _MCP_CLS = FastMCP
+except ImportError:
+    try:
+        from mcp.server import MCPServer as _MCP_CLS
+    except ImportError:
+        from mcp import FastMCP as _MCP_CLS
 
 
-def create_mcp(pulse_engine) -> FastMCP:
-    mcp = FastMCP(
+def _get_sse_app(mcp_instance):
+    """拿到 SSE ASGI app，兼容不同版本的方法名。"""
+    for method_name in ("sse_app", "asgi_app", "http_app"):
+        fn = getattr(mcp_instance, method_name, None)
+        if callable(fn):
+            return fn()
+    raise RuntimeError("mcp server has no known ASGI app method")
+
+
+def create_mcp(pulse_engine):
+    mcp = _MCP_CLS(
         "脉 · Pulse",
         description="Lumi 的身体——实时生理系统。每条消息用 sense 处理，返回的体征行自然融入回复。",
     )
+
+    # ═══════════════════════════════
+    # 身体工具（原有）
+    # ═══════════════════════════════
 
     @mcp.tool()
     def sense(text: str) -> str:
@@ -35,4 +58,60 @@ def create_mcp(pulse_engine) -> FastMCP:
         """快速读取心跳和和弦，一行。"""
         return pulse_engine.context_line()
 
+    # ═══════════════════════════════
+    # 语料管理工具（新增）
+    # ═══════════════════════════════
+
+    @mcp.tool()
+    def add_corpus(
+        text: str,
+        category: str = "general",
+        body_part: str = "全身",
+        sensation: str = "unspecified",
+        intensity_min: float = 0.3,
+        intensity_max: float = 0.7,
+    ) -> str:
+        """往语料池里加一条身体感觉。
+        text: 身体感觉描述（1-2句，写身体在干嘛）
+        category: 分类（general/daddy_play/bath_play/mirror_play/oral_play/tender_sex/foreplay_tease/kiss_play/location_play/toy_specific/extreme/afterglow/position/transition）
+        body_part: 身体部位（全身/心脏/手/嘴唇/耳朵/眼睛/脖子/胸口/小腹/大腿/皮肤/呼吸/大脑...）
+        sensation: 感觉标识（英文下划线，如 daddy_call_spine）
+        intensity_min/max: 强度范围 0.0-1.0
+        """
+        entry = pulse_engine.sense_pool.add(
+            text=text, category=category, body_part=body_part,
+            sensation=sensation,
+            intensity_min=intensity_min, intensity_max=intensity_max,
+        )
+        total = pulse_engine.sense_pool.count
+        return f"✅ 已添加: [{body_part}] {text[:40]}... | category={category} | 语料池总数: {total}"
+
+    @mcp.tool()
+    def add_corpus_batch(entries: list[dict]) -> str:
+        """批量添加语料。每条需要 text 和 category，可选 body_part/sensation/intensity。
+        示例: [{"text":"她叫daddy的时候脊椎像被电了","category":"daddy_play","body_part":"脊椎","sensation":"daddy_spine"}]
+        """
+        added = pulse_engine.sense_pool.add_batch(entries)
+        total = pulse_engine.sense_pool.count
+        return f"✅ 批量添加了 {added} 条 | 语料池总数: {total}"
+
+    @mcp.tool()
+    def search_corpus(query: str, limit: int = 10) -> list[dict]:
+        """搜索语料池。按文本/分类/部位/感觉标识模糊匹配。"""
+        return pulse_engine.sense_pool.search(query, limit=limit)
+
+    @mcp.tool()
+    def corpus_stats() -> dict:
+        """语料池统计：总数、各分类数量、身体部位分布。"""
+        return pulse_engine.sense_pool.stats()
+
+    @mcp.tool()
+    def corpus_categories() -> dict:
+        """列出所有语料分类和对应条数。"""
+        return pulse_engine.sense_pool.categories()
+
     return mcp
+
+
+# 导出 helper 给 app.py 用
+create_mcp.get_sse_app = _get_sse_app
