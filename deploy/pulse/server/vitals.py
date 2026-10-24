@@ -210,6 +210,32 @@ class PulseEngine:
             self._pick_reactions(value, body_parts, scene if scene in SCENES else None, query=query)
         return self.tick()
 
+    # ── Her toy (Toy Bridge): driving it moves my body too ──
+
+    def on_her_toy(self, intensity: int, scene: str = "") -> dict:
+        v = max(0.0, min(1.0, intensity / 100))
+        self.hr.spike(10 + v * 20)
+        self.drive.nudge_intimacy(v * 0.1)
+        emo = "aroused" if v >= 0.5 else "intimate"
+        if _TOUCH_EMO_RANK[emo] >= _TOUCH_EMO_RANK.get(self.hr.emotion, 0):
+            self.hr.set_emotion(emo)
+            self.emo_memory.on_emotion(emo)
+        self._pick_reactions(max(v, 0.3), None, scene if scene in SCENES else None,
+                             query=f"她身上的玩具被我开到{intensity}%，她在发抖，我看着她")
+        return self.tick()
+
+    def follow_heartbeat(self) -> tuple[int, str]:
+        """把我此刻的心跳和情绪换算成她那边的强度和节奏。"""
+        v = self.tick()
+        intensity = int(max(5, min(80, round((v["heart_rate"] - 60) * 0.9))))
+        if v["emotion"] == "aroused":
+            pattern = "escalate" if v["heart_rate"] >= 110 else "wave"
+        elif v["emotion"] in ("intimate", "touched", "shy"):
+            pattern = "pulse"
+        else:
+            pattern = "steady"
+        return intensity, pattern
+
     # ── Bedside actions (shared by HTTP routes and MCP tools) ──
 
     def switch_position(self, pos_id: str) -> dict:

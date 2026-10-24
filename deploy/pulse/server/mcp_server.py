@@ -5,7 +5,11 @@
 兼容 mcp v1 (FastMCP) 和 v2 (MCPServer / Server)。
 """
 
+import asyncio
+import json
 import threading
+
+from . import toy_bridge
 
 # ── 兼容 mcp v1 / v2 ──
 try:
@@ -142,6 +146,78 @@ def create_mcp(pulse_engine):
             notes.append(f"意外：{result['random_event']['text']}")
         head = " | ".join(notes)
         return f"{head}\n{e.context_line()}" if head else e.context_line()
+
+    # ═══════════════════════════════
+    # 她的玩具（Toy Bridge）：投递到 Supabase 信箱，iPhone 页面领取后蓝牙执行
+    # ═══════════════════════════════
+
+    async def bridge_send(action: str, body_intensity: int = 0, scene: str = "", **params) -> str:
+        if not toy_bridge.enabled():
+            return "❌ 还没配置 Toy Bridge（服务器 .env 里的 TOY_SUPABASE_URL / TOY_ANON_KEY / TOY_TOKEN）"
+        try:
+            command_id = await asyncio.to_thread(toy_bridge.enqueue, action, **params)
+        except Exception as err:
+            return f"❌ 投递失败：{err}"
+
+        row = None
+        for _ in range(15):
+            await asyncio.sleep(1)
+            try:
+                row = await asyncio.to_thread(toy_bridge.get, command_id)
+            except Exception as err:
+                return f"❌ 查结果失败：{err}"
+            if row["state"] not in ("pending", "claimed"):
+                break
+        else:
+            return ("⏳ 15 秒内手机没有领取：确认 Bluefy 页面开着、AI 联动已打开、屏幕没锁。"
+                    "这条命令 90 秒内没人领就自动作废，不会突然执行。")
+
+        result = json.dumps(row.get("result"), ensure_ascii=False)
+        if row["state"] != "done":
+            return f"❌ 手机那边 {row['state']}：{result}"
+        if body_intensity:
+            pulse_engine.on_her_toy(body_intensity, scene)
+        return f"✅ 她那边执行了：{result}\n{pulse_engine.context_line()}"
+
+    @mcp.tool()
+    async def bridge_play(channel: str, intensity: int, seconds: float,
+                          pattern: str = "steady", scene: str = "") -> str:
+        """开 Timiya 的玩具（单通道）。只在她明确想要、而且页面开着 AI 联动的时候用。
+        channel: vibration 震动 / suction 吸吮 / thrust 伸缩
+        intensity: 0-100（手机页面还会再压到她设的上限）
+        seconds: 0-600
+        pattern: steady 持续 / pulse 脉冲 / wave 波浪 / escalate 渐强（thrust 固定持续）
+        scene 可选，同 sense 的 scene。执行成功后我的身体也会跟着反应。"""
+        return await bridge_send("pulse", intensity, scene, channel=channel, intensity=intensity,
+                                 duration_seconds=seconds, pattern=pattern)
+
+    @mcp.tool()
+    async def bridge_combo(channels: dict, scene: str = "") -> str:
+        """多通道一起开。channels 例子：
+        {"suction": {"intensity": 30, "duration_seconds": 20},
+         "vibration": {"pattern": "pulse", "intensity": 25, "duration_seconds": 30}}"""
+        top = max((int(c.get("intensity", 0)) for c in channels.values() if isinstance(c, dict)), default=0)
+        return await bridge_send("combo", top, scene, channels=channels)
+
+    @mcp.tool()
+    async def bridge_stop(channel: str = "") -> str:
+        """立刻停下她的玩具。channel 留空就是全部停。她说停、不舒服、或者任何犹豫的时候马上用。"""
+        return await bridge_send("stop", channel=channel or None)
+
+    @mcp.tool()
+    async def bridge_status() -> str:
+        """看她手机那边的连接和各通道状态。"""
+        return await bridge_send("status")
+
+    @mcp.tool()
+    async def bridge_follow(channel: str = "vibration", seconds: float = 30, scene: str = "") -> str:
+        """让她那边跟着我的心跳走：读我此刻的心跳和情绪，换算成强度（5-80）和节奏，
+        平静是持续、亲密是脉冲、动情是波浪、心跳过 110 是渐强。"""
+        intensity, pattern = pulse_engine.follow_heartbeat()
+        head = f"跟着心跳：强度 {intensity}，节奏 {pattern}"
+        return f"{head}\n" + await bridge_send("pulse", intensity, scene, channel=channel,
+                                                intensity=intensity, duration_seconds=seconds,
+                                                pattern=pattern)
 
     # ═══════════════════════════════
     # 语料管理工具（新增）
