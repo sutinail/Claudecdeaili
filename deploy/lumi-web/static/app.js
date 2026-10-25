@@ -112,7 +112,7 @@ function voiceHtml(script) {
   return `<div class="voice" data-script="${esc(script)}">
     <button class="voice-play" type="button" aria-label="播放语音条">${PLAY_ICON}</button>
     <div class="voice-body"><div class="voice-wave">${bars}</div>
-      <div class="voice-meta"><span>约 ${secs}″</span><button type="button" class="voice-toggle">原文</button></div>
+      <div class="voice-meta"><span>${secs}″</span><button type="button" class="voice-toggle">原文</button></div>
     </div></div>
     <div class="voice-script" hidden>${esc(script)}</div>`;
 }
@@ -191,6 +191,8 @@ function toast(msg) {
 }
 
 // ── 消息 ──
+const STAR = `<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5c.5 5.6 4.9 10 10.5 10.5-5.6.5-10 4.9-10.5 10.5C11.5 16.9 7.1 12.5 1.5 12 7.1 11.5 11.5 7.1 12 1.5z" fill="currentColor"/></svg>`;
+const STAR_O = `<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.5 5.1 4.4 9 9.5 9.5-5.1.5-9 4.4-9.5 9.5-.5-5.1-4.4-9-9.5-9.5 5.1-.5 9-4.4 9.5-9.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmtTime = (iso) => {
   const d = new Date(iso);
@@ -215,7 +217,7 @@ function msgEl(msg, streaming = false) {
     return row;
   }
   const star = document.createElement("span");
-  star.className = "sparkle"; star.textContent = "✦"; star.setAttribute("aria-hidden", "true");
+  star.className = "sparkle"; star.innerHTML = STAR;
   row.appendChild(star);
   const inner = document.createElement("div");
   inner.className = "inner";
@@ -252,7 +254,7 @@ function fillLumi(row, msg, streaming) {
   const recalled = (msg.tools || []).filter(isMemoryTool).length;
   const foot = document.createElement("div");
   foot.className = "foot";
-  foot.innerHTML = `<span>✧ ${recalled ? `Recalled ${recalled}` : "No recall"}</span>` + (streaming ? `<span class="live">在说话</span>` : "");
+  foot.innerHTML = `<span>${STAR_O}${recalled ? `Recalled ${recalled}` : "No recall"}</span>` + (streaming ? `<span class="live">在说话</span>` : "");
   inner.appendChild(foot);
 }
 
