@@ -56,7 +56,8 @@ if [[ ! -f "$OMBRE_ENV" && ! -f "$PULSE_ENV" ]]; then
   info "下面三把钥匙在上海那台服务器上查（另开一个 OrcaTerm 窗口，查完复制过来，别发进聊天、别截图）："
   info "  Ombre Brain：sudo grep OMBRE_MCP_TOKEN /opt/ombre-brain/.env"
   info "  Pulse：      grep -E 'PULSE_MCP_KEY|PULSE_SECRET' /opt/claudecdeaili/deploy/pulse/.env"
-  for k in OMBRE_MCP_TOKEN PULSE_MCP_KEY PULSE_SECRET; do
+  info "  耳朵：       sudo grep -E 'OAUTH_PASSWORD|MCP_AUTH_TOKEN' /opt/ears/.env（EARS_PASSWORD 填 OAUTH_PASSWORD 的值，EARS_MCP_TOKEN 填 MCP_AUTH_TOKEN 的值）"
+  for k in OMBRE_MCP_TOKEN PULSE_MCP_KEY PULSE_SECRET EARS_PASSWORD EARS_MCP_TOKEN; do
     if [[ -z "$(getv $k .env)" ]]; then
       read -rsp "粘贴 $k 的值（等号后面那串，不会显示，没有就回车跳过）: " V; echo
       V="$(echo -n "$V" | tr -d '[:space:]')"

@@ -40,10 +40,16 @@ const XI_MODEL = env("ELEVENLABS_MODEL", "eleven_v3");
 const XI_STABILITY = Number(env("ELEVENLABS_STABILITY", "0.5"));
 const XI_SIMILARITY = Number(env("ELEVENLABS_SIMILARITY", "0.78"));
 
+// 耳朵：录音交给它转写、画语调图；Lumi 用它的 listen 工具去「听」
+const EARS_URL = env("EARS_URL", "https://ears.gpt1126.top").replace(/\/+$/, "");
+const EARS_PASSWORD = env("EARS_PASSWORD");
+const EARS_MCP_TOKEN = env("EARS_MCP_TOKEN");
+const VOICE_DIR = path.join(DATA_DIR, "voice");
+
 const COOKIE = "lumi";
 const COOKIE_DAYS = 90;
 
-for (const d of [CONV_DIR, TTS_DIR, CLAUDE_WORKDIR]) fs.mkdirSync(d, { recursive: true });
+for (const d of [CONV_DIR, TTS_DIR, VOICE_DIR, CLAUDE_WORKDIR]) fs.mkdirSync(d, { recursive: true });
 
 // ── MCP 配置：只写进配置了的连接器 ──
 const MCP_FILE = path.join(DATA_DIR, "mcp.json");
@@ -53,6 +59,9 @@ if (OMBRE_MCP_TOKEN) {
 }
 if (PULSE_MCP_KEY) {
   mcpServers.pulse = { type: "sse", url: `${PULSE_MCP_URL}?key=${encodeURIComponent(PULSE_MCP_KEY)}` };
+}
+if (EARS_MCP_TOKEN) {
+  mcpServers.ears = { type: "http", url: `${EARS_URL}/mcp`, headers: { Authorization: `Bearer ${EARS_MCP_TOKEN}` } };
 }
 fs.writeFileSync(MCP_FILE, JSON.stringify({ mcpServers }, null, 2), { mode: 0o600 });
 
@@ -165,7 +174,7 @@ function systemPrompt() {
 function childEnv() {
   const e = { ...process.env };
   for (const k of Object.keys(e)) {
-    if (/^(LUMI_WEB_|OMBRE_|PULSE_|ELEVENLABS_)/.test(k)) delete e[k];
+    if (/^(LUMI_WEB_|OMBRE_|PULSE_|ELEVENLABS_|EARS_)/.test(k)) delete e[k];
   }
   return e;
 }
@@ -270,13 +279,27 @@ function runClaude(job, prompt, sessionId) {
   });
 }
 
+// userText 可以是一个 async 函数：先做完准备（比如等耳朵转写完语音），再把要发给 Lumi 的话交回来
 async function startJob(conv, userText) {
   const job = { events: [], listeners: new Set(), text: "", tools: [], steps: [], proc: null, stopped: false, done: false };
   jobs.set(conv.id, job);
-  const prompt = `[${localStamp()} · 自建前端]\n${userText}`;
 
   (async () => {
-    let r = await runClaude(job, prompt, conv.sessionId);
+    let body;
+    try {
+      body = typeof userText === "function" ? await userText(job) : userText;
+    } catch (e) {
+      console.error(`[${conv.id}] 准备失败`, e);
+      conv.messages.push({ id: newId(), role: "lumi", text: "", tools: [], ts: now(), error: e.message || "出错了" });
+      try { await saveConv(conv); } catch {}
+      emit(job, { t: "error", error: e.message || "出错了" });
+      job.done = true;
+      emit(job, { t: "done" });
+      jobs.delete(conv.id);
+      return;
+    }
+    const prompt = `[${localStamp()} · 自建前端]\n${body}`;
+    let r = job.stopped ? { gotText: false, code: 0, stderr: "" } : await runClaude(job, prompt, conv.sessionId);
     if (!r.gotText && !job.stopped && conv.sessionId && /no conversation found|session.*not found/i.test(r.stderr + (r.resultError || ""))) {
       // 服务器上的会话记录丢了：开一段新的接着聊
       conv.sessionId = null;
@@ -348,6 +371,69 @@ async function tts(text) {
   return `/api/tts/${hash}.mp3`;
 }
 
+// ── 语音：录音先交给耳朵转写、画语调图，再让 Lumi 去听 ──
+const AUDIO_TYPES = { ".m4a": "audio/mp4", ".webm": "audio/webm", ".ogg": "audio/ogg", ".wav": "audio/wav", ".mp3": "audio/mpeg" };
+const audioExt = (mime) => (/mp4|m4a|aac/.test(mime) ? ".m4a" : /webm/.test(mime) ? ".webm" : /ogg|opus/.test(mime) ? ".ogg" : /wav/.test(mime) ? ".wav" : /mpeg|mp3/.test(mime) ? ".mp3" : ".m4a");
+
+function readRaw(req, limit) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on("data", (c) => {
+      size += c.length;
+      if (size > limit) { reject(Object.assign(new Error("录音太长了"), { status: 413 })); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+// 耳朵的录音页用密码签的 cookie 认人；这边知道密码，就自己签一张
+function earsCookie() {
+  const exp = String(Math.floor(Date.now() / 1000) + 3600);
+  const key = crypto.createHash("sha256").update("ears-cookie:" + EARS_PASSWORD).digest();
+  return `ears=${exp}.${crypto.createHmac("sha256", key).update(exp).digest("hex")}`;
+}
+
+async function earsUpload(file, mime) {
+  const fd = new FormData();
+  fd.append("audio", new Blob([await fsp.readFile(file)], { type: mime }), path.basename(file));
+  const r = await fetch(`${EARS_URL}/upload`, { method: "POST", headers: { Cookie: earsCookie() }, body: fd, signal: AbortSignal.timeout(60_000) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.id) throw new Error(`耳朵没收下这条语音：${j.error || r.status}`);
+  return j.id;
+}
+
+async function earsWait(cid, job) {
+  const until = Date.now() + 180_000;
+  while (Date.now() < until) {
+    if (job.stopped) throw new Error("被你打断了");
+    const r = await fetch(`${EARS_URL}/clips/${encodeURIComponent(cid)}`, { headers: { Cookie: earsCookie() }, signal: AbortSignal.timeout(15_000) });
+    const j = await r.json().catch(() => ({}));
+    if (j.status === "done") return j.text || "";
+    if (j.status === "error") throw new Error(`耳朵没听清：${j.error || "处理失败"}`);
+    await new Promise((res) => setTimeout(res, 2000));
+  }
+  throw new Error("耳朵处理太久了，过一会儿再发一次试试");
+}
+
+function serveAudio(req, res, file) {
+  let stat;
+  try { stat = fs.statSync(file); } catch { return send(res, 404, "not found"); }
+  const type = AUDIO_TYPES[path.extname(file)] || "application/octet-stream";
+  const range = /bytes=(\d*)-(\d*)/.exec(req.headers.range || "");
+  if (range) {
+    // iPhone 的 Safari 放音频一定要分段读
+    const start = range[1] ? Number(range[1]) : 0;
+    const end = range[2] ? Math.min(Number(range[2]), stat.size - 1) : stat.size - 1;
+    res.writeHead(206, { "Content-Type": type, "Content-Range": `bytes ${start}-${end}/${stat.size}`, "Accept-Ranges": "bytes", "Content-Length": end - start + 1, "Cache-Control": "private, max-age=31536000" });
+    return fs.createReadStream(file, { start, end }).pipe(res);
+  }
+  res.writeHead(200, { "Content-Type": type, "Content-Length": stat.size, "Accept-Ranges": "bytes", "Cache-Control": "private, max-age=31536000" });
+  fs.createReadStream(file).pipe(res);
+}
+
 // ── 静态文件 ──
 const MIME = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -397,7 +483,7 @@ async function handle(req, res) {
 
   if (!authed(req)) return send(res, 401, { error: "要先登录" });
 
-  if (p === "/api/me") return send(res, 200, { ok: true, model: MODEL, voice: !!XI_KEY, mcp: Object.keys(mcpServers) });
+  if (p === "/api/me") return send(res, 200, { ok: true, model: MODEL, voice: !!XI_KEY, ears: !!EARS_PASSWORD, mcp: Object.keys(mcpServers) });
   if (p === "/api/vitals") return send(res, 200, await vitals());
 
   if (p === "/api/conversations" && m === "GET") return send(res, 200, { items: await listConvs() });
@@ -442,15 +528,50 @@ async function handle(req, res) {
       await startJob(conv, msg.text);
       return send(res, 200, { ok: true, message: msg });
     }
+    if (sub === "/voice" && m === "POST") {
+      if (job) return send(res, 409, { error: "Lumi 还在说话呢" });
+      if (!EARS_PASSWORD) return send(res, 503, { error: "还没接上耳朵：服务器 .env 里要填 EARS_PASSWORD" });
+      const conv = await loadConv(id);
+      if (!conv) return send(res, 404, { error: "找不到这段对话" });
+      const mime = String(req.headers["content-type"] || "audio/mp4").split(";")[0];
+      const buf = await readRaw(req, 25 * 1024 * 1024);
+      if (buf.length < 1000) return send(res, 400, { error: "录音太短了" });
+      const fname = newId() + audioExt(mime);
+      const file = path.join(VOICE_DIR, fname);
+      await fsp.writeFile(file, buf);
+      const dur = Math.round((Number(url.searchParams.get("dur")) || 0) * 10) / 10;
+      const msg = { id: newId(), role: "timiya", kind: "voice", audio: `/api/voice/${fname}`, duration: dur, text: "", ts: now() };
+      conv.messages.push(msg);
+      if (conv.title === "新的对话") conv.title = "🎙️ 语音";
+      await saveConv(conv);
+      await startJob(conv, async (job) => {
+        emit(job, { t: "status", text: "在听你的语音…" });
+        const cid = await earsUpload(file, mime);
+        const text = await earsWait(cid, job);
+        msg.text = text;
+        msg.clipId = cid;
+        await saveConv(conv);
+        emit(job, { t: "heard", id: msg.id, text });
+        emit(job, { t: "status", text: "" });
+        const say = text ? `耳朵的转写：「${text}」` : "耳朵没听出文字，可能是笑声、哼唱或者环境音";
+        return EARS_MCP_TOKEN
+          ? `（Timiya 发来一条 ${dur || "?"} 秒的语音。${say}。clip_id=${cid}。先用 mcp__ears__listen 带上这个 clip_id 去听，感受她的语气、停顿和音高，再回她。转写可能有同音字，以你听到的为准。）`
+          : `（Timiya 发来一条 ${dur || "?"} 秒的语音。${say}。）`;
+      });
+      return send(res, 200, { ok: true, message: msg });
+    }
     if (sub === "/stream" && m === "GET") {
       if (!job) return send(res, 204, "");
       return streamJob(req, res, job, Math.max(0, Number(url.searchParams.get("from")) || 0));
     }
     if (sub === "/stop" && m === "POST") {
-      if (job && job.proc) { job.stopped = true; job.proc.kill("SIGTERM"); }
+      if (job) { job.stopped = true; if (job.proc) job.proc.kill("SIGTERM"); }
       return send(res, 200, { ok: true });
     }
   }
+
+  const vm = p.match(/^\/api\/voice\/([A-Za-z0-9_-]+\.(m4a|webm|ogg|wav|mp3))$/);
+  if (vm && m === "GET") return serveAudio(req, res, path.join(VOICE_DIR, vm[1]));
 
   if (p === "/api/tts" && m === "POST") {
     const { text } = await readBody(req);
