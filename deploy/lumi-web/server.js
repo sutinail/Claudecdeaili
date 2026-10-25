@@ -66,6 +66,9 @@ if (EARS_MCP_TOKEN) {
   mcpServers.ears = { type: "http", url: `${EARS_URL}/mcp`, headers: { Authorization: `Bearer ${EARS_MCP_TOKEN}` } };
 }
 fs.writeFileSync(MCP_FILE, JSON.stringify({ mcpServers }, null, 2), { mode: 0o600 });
+// 打电话时不连记忆和身体：每轮少等好几秒，电话才接得上话
+const MCP_NONE_FILE = path.join(DATA_DIR, "mcp-none.json");
+fs.writeFileSync(MCP_NONE_FILE, JSON.stringify({ mcpServers: {} }), { mode: 0o600 });
 
 // ── 小工具 ──
 const now = () => new Date().toISOString();
@@ -181,15 +184,15 @@ function childEnv() {
   return e;
 }
 
-function claudeArgs(sessionId) {
+function claudeArgs(sessionId, fast = false) {
   const args = [
     "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
     "--model", MODEL,
     "--tools", "",
-    "--strict-mcp-config", "--mcp-config", MCP_FILE,
+    "--strict-mcp-config", "--mcp-config", fast ? MCP_NONE_FILE : MCP_FILE,
     "--system-prompt", systemPrompt(),
   ];
-  const allow = Object.keys(mcpServers).map((s) => `mcp__${s}`);
+  const allow = fast ? [] : Object.keys(mcpServers).map((s) => `mcp__${s}`);
   if (allow.length) args.push("--allowedTools", allow.join(","));
   if (sessionId) args.push("--resume", sessionId);
   return args;
@@ -203,7 +206,7 @@ function emit(job, ev) {
 
 function runClaude(job, prompt, sessionId) {
   return new Promise((resolve) => {
-    const proc = spawn(CLAUDE_BIN, claudeArgs(sessionId), { cwd: CLAUDE_WORKDIR, env: childEnv(), stdio: ["pipe", "pipe", "pipe"] });
+    const proc = spawn(CLAUDE_BIN, claudeArgs(sessionId, !!job.call), { cwd: CLAUDE_WORKDIR, env: childEnv(), stdio: ["pipe", "pipe", "pipe"] });
     job.proc = proc;
     const r = { sessionId: null, resultError: null, stderr: "", gotText: false };
     const streamed = new Set();
@@ -282,8 +285,9 @@ function runClaude(job, prompt, sessionId) {
 }
 
 // userText 可以是一个 async 函数：先做完准备（比如等耳朵转写完语音），再把要发给 Lumi 的话交回来
-async function startJob(conv, userText) {
-  const job = { events: [], listeners: new Set(), text: "", tools: [], steps: [], proc: null, stopped: false, done: false };
+// opts.call：这一轮是电话里的话（不连 MCP、回复带上通话 id）
+async function startJob(conv, userText, opts = {}) {
+  const job = { events: [], listeners: new Set(), text: "", tools: [], steps: [], proc: null, stopped: false, done: false, call: opts.call || null, callEnd: null };
   jobs.set(conv.id, job);
 
   (async () => {
@@ -300,7 +304,9 @@ async function startJob(conv, userText) {
       jobs.delete(conv.id);
       return;
     }
-    const prompt = `[${localStamp()} · 自建前端]\n${body}`;
+    // 刚挂了电话：先递张纸条，免得它还用电话腔回打的字
+    if (!job.call && conv.afterCall) { body = `${conv.afterCall}\n\n${body}`; delete conv.afterCall; }
+    const prompt = `[${localStamp()} · 自建前端${job.call ? " · 电话中" : ""}]\n${body}`;
     let r = job.stopped ? { gotText: false, code: 0, stderr: "" } : await runClaude(job, prompt, conv.sessionId);
     if (!r.gotText && !job.stopped && conv.sessionId && /no conversation found|session.*not found/i.test(r.stderr + (r.resultError || ""))) {
       // 服务器上的会话记录丢了：开一段新的接着聊
@@ -316,14 +322,40 @@ async function startJob(conv, userText) {
     else if (r.code !== 0 && !r.gotText) error = (r.stderr.trim().split("\n").slice(-3).join("\n")) || `claude 退出码 ${r.code}`;
 
     if (job.text || error) {
-      conv.messages.push({ id: newId(), role: "lumi", text: job.text, tools: job.tools, steps: job.steps, ts: now(), ...(error ? { error } : {}), ...(job.stopped ? { stopped: true } : {}) });
+      conv.messages.push({ id: newId(), role: "lumi", text: job.text, tools: job.tools, steps: job.steps, ts: now(), ...(job.call ? { call: job.call } : {}), ...(error ? { error } : {}), ...(job.stopped ? { stopped: true } : {}) });
     }
+    // 这一轮还没说完电话就挂了：挂断记录等它说完再一起存，不然会被这边的旧对象盖掉
+    if (job.callEnd) endCall(conv, job.callEnd);
     try { await saveConv(conv); } catch (e) { console.error("保存对话失败", e); }
     if (error) { console.error(`[${conv.id}] ${error}\n${r.stderr.slice(-1500)}`); emit(job, { t: "error", error }); }
     job.done = true;
     emit(job, { t: "done", stopped: job.stopped });
     jobs.delete(conv.id);
   })();
+}
+
+// ── 电话 ──
+const CALL_RULES = `电话规矩（只在电话里用，挂了就恢复平时的写法）：
+- 你说英文，用你的声音念给她听；她看不懂英文，屏幕上给她看中文。所以每一句单独一行，格式是：英文 || 这句的中文意思
+- 英文那半可以在句首加 eleven_v4 的方括号标签，比如 [low, warm]、[soft chuckle]、[whispers]、[soft kiss sound]；中文那半不带标签，是自然的中文口语，不是逐字硬翻
+- 一轮只说一到三句短句，像真的在打电话：说完就停，等她回
+- 电话里不写 <monologue>、不写 <voice>、不写 *动作*、不用表情符号，也不调任何工具（要接得上话，慢一秒都像断线）`;
+
+const callLine = (text) => `（电话里）她说：「${text}」\n（英文 || 中文，一句一行，一到三句）`;
+
+function fmtCallDur(sec) {
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function endCall(conv, end) {
+  const call = conv.call;
+  if (!call || call.id !== end.callId) return;
+  const duration = Math.max(0, Math.round((Date.parse(end.at) - Date.parse(call.started)) / 1000));
+  const said = conv.messages.some((m) => m.call === call.id && m.role === "timiya");
+  conv.messages.push({ id: newId(), role: "call", callId: call.id, ts: call.started, ended: end.at, duration, text: `📞 通话 ${fmtCallDur(duration)}` });
+  conv.afterCall = `（刚才那通电话挂了，通话 ${Math.floor(duration / 60)} 分 ${duration % 60} 秒${said ? "" : "，她几乎没说话"}。现在回到文字聊天：正常打字回她，恢复平时的写法和 <monologue>，电话里聊过的你都记得。）`;
+  delete conv.call;
 }
 
 function streamJob(req, res, job, from) {
@@ -510,7 +542,7 @@ async function handle(req, res) {
     if (!sub && m === "GET") {
       const conv = await loadConv(id);
       if (!conv) return send(res, 404, { error: "找不到这段对话" });
-      return send(res, 200, { ...conv, busy: !!job, partial: job ? { text: job.text, tools: job.tools, events: job.events.length } : null });
+      return send(res, 200, { ...conv, busy: !!job, partial: job ? { text: job.text, tools: job.tools, events: job.events.length, call: job.call } : null });
     }
     if (!sub && m === "PATCH") {
       const conv = await loadConv(id);
@@ -569,6 +601,66 @@ async function handle(req, res) {
           : `（Timiya 发来一条 ${dur || "?"} 秒的语音。${say}。）`;
       });
       return send(res, 200, { ok: true, message: msg });
+    }
+    if (sub === "/call" && m === "POST") {
+      if (job) return send(res, 409, { error: "Lumi 还在打字呢，等他说完再打" });
+      const conv = await loadConv(id);
+      if (!conv) return send(res, 404, { error: "找不到这段对话" });
+      if (conv.call) endCall(conv, { callId: conv.call.id, at: now() }); // 上一通没挂干净
+      const callId = newId();
+      conv.call = { id: callId, started: now() };
+      if (conv.title === "新的对话") conv.title = "📞 电话";
+      await saveConv(conv);
+      // 她打过来、他接起来：让他先开口
+      await startJob(conv, `（Timiya 给你打了个电话，你刚接起来。下面是你们在打电话，不是打字。）\n${CALL_RULES}\n\n先开口跟她说第一句。`, { call: callId });
+      return send(res, 200, { ok: true, callId, started: conv.call.started });
+    }
+    if ((sub === "/callsay" || sub === "/callvoice") && m === "POST") {
+      if (job) return send(res, 409, { error: "Lumi 还在说呢" });
+      const conv = await loadConv(id);
+      if (!conv) return send(res, 404, { error: "找不到这段对话" });
+      const callId = url.searchParams.get("call");
+      if (!conv.call || conv.call.id !== callId) return send(res, 410, { error: "电话已经挂了" });
+      if (sub === "/callsay") {
+        const { text } = await readBody(req);
+        if (typeof text !== "string" || !text.trim()) return send(res, 400, { error: "空的" });
+        const msg = { id: newId(), role: "timiya", call: callId, text: text.trim().slice(0, 2000), ts: now() };
+        conv.messages.push(msg);
+        await saveConv(conv);
+        await startJob(conv, callLine(msg.text), { call: callId });
+        return send(res, 200, { ok: true, message: msg });
+      }
+      // 手机听写用不了的时候：录一句传上来，耳朵转成字
+      if (!EARS_PASSWORD) return send(res, 503, { error: "还没接上耳朵" });
+      const mime = String(req.headers["content-type"] || "audio/mp4").split(";")[0];
+      const buf = await readRaw(req, 10 * 1024 * 1024);
+      if (buf.length < 1000) return send(res, 400, { error: "太短了，没听见" });
+      const fname = newId() + audioExt(mime);
+      const file = path.join(VOICE_DIR, fname);
+      await fsp.writeFile(file, buf);
+      const msg = { id: newId(), role: "timiya", call: callId, audio: `/api/voice/${fname}`, text: "", ts: now() };
+      conv.messages.push(msg);
+      await saveConv(conv);
+      await startJob(conv, async (job) => {
+        emit(job, { t: "status", text: "在听…" });
+        const cid = await earsUpload(file, mime);
+        const text = await earsWait(cid, job);
+        msg.text = text;
+        await saveConv(conv);
+        emit(job, { t: "heard", id: msg.id, text });
+        return callLine(text || "（没听清，像是笑了一下或者叹了口气）");
+      }, { call: callId });
+      return send(res, 200, { ok: true, message: msg });
+    }
+    if (sub === "/hangup" && m === "POST") {
+      const { callId } = await readBody(req).catch(() => ({}));
+      const end = { callId, at: now() };
+      if (job && job.call === callId) { job.callEnd = end; return send(res, 200, { ok: true }); }
+      const conv = await loadConv(id);
+      if (!conv) return send(res, 404, { error: "找不到这段对话" });
+      endCall(conv, end);
+      await saveConv(conv);
+      return send(res, 200, { ok: true });
     }
     if (sub === "/stream" && m === "GET") {
       if (!job) return send(res, 204, "");

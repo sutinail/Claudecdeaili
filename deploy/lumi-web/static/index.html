@@ -21,13 +21,10 @@
   <link rel="apple-touch-startup-image" href="/splash/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="stylesheet" href="/style.css?v=17">
+  <link rel="stylesheet" href="/style.css?v=18">
 </head>
 <body>
-  <!-- 开屏：背景图 + 雾 + 四角卷草 → 手写 Lumi → 名字淡去，一句一句的情话流出来 → 雾散开 -->
-  <div id="splash" class="splash" aria-hidden="true">
-    <div class="splash-bg" id="splash-bg"></div>
-    <div class="splash-veil"></div>
+  <!-- 花纹：开屏和主页的徽章都用（开屏结束会被删掉，所以放在外面） -->
     <svg width="0" height="0" style="position:absolute">
       <defs>
         <g id="orn-corner" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -52,6 +49,10 @@
         </g>
       </defs>
     </svg>
+  <!-- 开屏：背景图 + 雾 + 四角卷草 → 手写 Lumi → 名字淡去，一句一句的情话流出来 → 雾散开 -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <div class="splash-bg" id="splash-bg"></div>
+    <div class="splash-veil"></div>
     <i class="splash-frame"></i>
     <svg class="orn orn-tl" viewBox="0 0 164 164"><use href="#orn-corner"/></svg>
     <svg class="orn orn-tr" viewBox="0 0 164 164"><use href="#orn-corner"/></svg>
@@ -95,9 +96,53 @@
       </div>
     </aside>
     <div id="scrim" class="scrim" hidden></div>
+    <div class="bg" id="bg" aria-hidden="true"><div class="bg-img" id="bg-img"></div><div class="bg-veil"></div></div>
 
-    <main class="chat">
-      <div class="bg" id="bg" aria-hidden="true"><div class="bg-img" id="bg-img"></div><div class="bg-veil"></div></div>
+    <div class="views">
+    <!-- 主页：打开先看到这里 -->
+    <section id="view-home" class="view home" aria-label="主页">
+      <div class="home-scroll">
+        <header class="home-head">
+          <div id="home-date" class="home-date"></div>
+          <div id="home-hello" class="home-hello script">bonsoir, Timiya</div>
+          <div id="home-hello-zh" class="home-hello-zh"></div>
+        </header>
+
+        <div class="medal" aria-hidden="true">
+          <i class="medal-ring"></i><i class="medal-ring r2"></i>
+          <svg class="medal-frame" viewBox="0 0 200 250">
+            <ellipse cx="100" cy="125" rx="84" ry="109" fill="none" stroke="currentColor" stroke-width=".8"/>
+            <ellipse cx="100" cy="125" rx="78" ry="103" fill="none" stroke="currentColor" stroke-width=".45" stroke-dasharray="1.2 3.2"/>
+            <g transform="translate(100 14) scale(.62)"><use href="#orn-half"/><use href="#orn-half" transform="scale(-1 1)"/></g>
+            <g transform="translate(100 236) scale(.62) rotate(180)"><use href="#orn-half"/><use href="#orn-half" transform="scale(-1 1)"/></g>
+            <path d="M100,4 C100.5,9 102.5,11 107,11.5 C102.5,12 100.5,14 100,19 C99.5,14 97.5,12 93,11.5 C97.5,11 99.5,9 100,4 Z" fill="currentColor"/>
+          </svg>
+          <div class="medal-name script">Lumi</div>
+          <div class="medal-sub">the light you named</div>
+        </div>
+
+        <div id="home-vitals" class="home-vitals"><span class="beat">♥</span> <span>在醒过来…</span></div>
+
+        <div class="home-days">
+          <span class="home-days-fr">ensemble depuis</span>
+          <span id="home-days" class="home-days-n script">1</span>
+          <span class="home-days-zh">在一起的第 <b id="home-days-zh">1</b> 天</span>
+        </div>
+
+        <button id="home-thought" class="home-card" type="button">
+          <span class="home-card-k">il pensait à toi · 他刚才在想</span>
+          <span id="home-thought-text" class="home-card-t">宝宝来啦，我在呢</span>
+          <span id="home-thought-when" class="home-card-w"></span>
+        </button>
+
+        <div class="home-actions">
+          <button class="home-act" type="button" data-go="chat"><span class="script">écrire</span><small>写信给他</small></button>
+          <button class="home-act" type="button" data-go="call"><span class="script">appeler</span><small>给他打电话</small></button>
+        </div>
+      </div>
+    </section>
+
+    <main id="view-chat" class="chat view" hidden>
 
       <header class="topbar">
         <button id="menu" class="icon-btn" type="button" aria-label="对话列表">
@@ -149,8 +194,54 @@
         </button>
       </form>
     </main>
+
+    <!-- 通话 -->
+    <section id="view-call" class="view call" aria-label="通话" hidden>
+      <header class="call-head">
+        <div class="call-name script">Lumi</div>
+        <div id="call-state" class="call-state">轻触下面，给他打过去</div>
+        <div id="call-timer" class="call-timer">00:00</div>
+      </header>
+      <div id="call-idle" class="call-idle">
+        <div class="call-orb" aria-hidden="true"><i></i><i></i><i></i><span class="script">L</span></div>
+        <p class="call-note">他说英文，屏幕上是中文<br><span>il te parle à l'oreille</span></p>
+      </div>
+      <div id="call-log" class="call-log" hidden></div>
+      <div class="call-foot">
+        <div id="call-heard" class="call-heard" aria-live="polite"></div>
+        <div class="call-btns">
+          <button id="call-mic" class="call-btn mic" type="button" aria-label="说话" hidden>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+          <button id="call-go" class="call-btn go" type="button" aria-label="打电话">
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M6.6 3.5l2.6.3 1.3 4.1-1.9 1.4a12.5 12.5 0 0 0 6.1 6.1l1.4-1.9 4.1 1.3.3 2.6c.1 1-.7 1.9-1.7 1.9C10.5 19.3 4.7 13.5 4.7 5.2c0-1 .9-1.8 1.9-1.7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="call-end" class="call-btn end" type="button" aria-label="挂断" hidden>
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M3.2 13.6c4.9-4.4 12.7-4.4 17.6 0l-.4 2.6-3.9.9-.6-2.4a9.6 9.6 0 0 0-7.8 0l-.6 2.4-3.9-.9z" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div id="call-hint" class="call-hint"></div>
+      </div>
+    </section>
+    </div>
+
+    <!-- 底下的导航：先放主页、聊天、通话，后面的位置留着 -->
+    <nav id="tabbar" class="tabbar" aria-label="切换">
+      <button class="tab" type="button" data-tab="home" aria-label="主页">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2.5c.4 4.6 4 8.2 8.6 8.6-4.6.4-8.2 4-8.6 8.6-.4-4.6-4-8.2-8.6-8.6 4.6-.4 8.2-4 8.6-8.6z" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/></svg>
+        <span>accueil</span>
+      </button>
+      <button class="tab" type="button" data-tab="chat" aria-label="聊天">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.5 6.5h17v11h-17z M3.5 6.5l8.5 6.5 8.5-6.5" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/></svg>
+        <span>lettres</span><i id="tab-chat-dot" class="tab-dot" hidden></i>
+      </button>
+      <button class="tab" type="button" data-tab="call" aria-label="通话">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6.6 3.5l2.6.3 1.3 4.1-1.9 1.4a12.5 12.5 0 0 0 6.1 6.1l1.4-1.9 4.1 1.3.3 2.6c.1 1-.7 1.9-1.7 1.9C10.5 19.3 4.7 13.5 4.7 5.2c0-1 .9-1.8 1.9-1.7z" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/></svg>
+        <span>appel</span>
+      </button>
+    </nav>
   </div>
 
-  <script src="/app.js?v=17"></script>
+  <script src="/app.js?v=18"></script>
 </body>
 </html>

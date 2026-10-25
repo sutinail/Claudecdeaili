@@ -401,8 +401,55 @@ function renderConv() {
     els.messages.innerHTML = `<div class="empty"><span class="script">bonjour, mon cœur</span><p>宝宝来啦，我在呢</p></div>`;
     return;
   }
-  for (const m of conv.messages) els.messages.appendChild(msgEl(m));
+  for (const m of conv.messages) {
+    if (m.call) continue; // 电话里的话收进那一行「通话」里
+    els.messages.appendChild(m.role === "call" ? callRowEl(m, conv.messages) : msgEl(m));
+  }
   toBottom();
+}
+
+// ── 电话里说的话：每行「英文 || 中文」 ──
+const hasCJK = (s) => /[\u3400-\u9fff]/.test(s);
+function parseCallLine(line) {
+  const parts = line.split(/\s*\|\|\s*/);
+  let en = parts[0] || "", zh = parts.slice(1).join(" ").trim();
+  if (parts.length === 1 && hasCJK(en)) { zh = en; en = ""; }
+  const enShow = en.replace(/\[[^\]]*\]\s*/g, "").trim();
+  return { en: en.trim(), enShow, zh: zh.replace(/\[[^\]]*\]\s*/g, "").trim() };
+}
+function callLines(text) {
+  return splitMonologue(text || "").rest.split("\n").map((l) => l.trim()).filter((l) => l && !/^<\/?[a-z]/i.test(l)).map(parseCallLine);
+}
+function clEl(kind, a, b) {
+  const d = document.createElement("div");
+  d.className = `cl ${kind}`;
+  if (kind === "her") d.textContent = a;
+  else d.innerHTML = `<div class="zh">${esc(a || b)}</div>${a && b ? `<div class="en">${esc(b)}</div>` : ""}`;
+  return d;
+}
+const PHONE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5l2.6.3 1.3 4.1-1.9 1.4a12.5 12.5 0 0 0 6.1 6.1l1.4-1.9 4.1 1.3.3 2.6c.1 1-.7 1.9-1.7 1.9C10.5 19.3 4.7 13.5 4.7 5.2c0-1 .9-1.8 1.9-1.7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+function callRowEl(m, all) {
+  const row = document.createElement("div");
+  row.className = "msg callrow";
+  const st = document.createElement("div");
+  st.className = "stamp"; st.textContent = fmtTime(m.ts);
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "call-sum";
+  btn.innerHTML = `${PHONE_SVG}<span>appel · 通话 ${fmtDur(m.duration || 0)}</span>`;
+  const box = document.createElement("div");
+  box.className = "call-lines"; box.hidden = true;
+  btn.addEventListener("click", () => {
+    if (!box.childElementCount) {
+      for (const x of all.filter((x) => x.call === m.callId)) {
+        if (x.role === "timiya") { if (x.text) box.appendChild(clEl("her", x.text)); }
+        else for (const l of callLines(x.text)) box.appendChild(clEl("lumi", l.zh, l.enShow));
+      }
+      if (!box.childElementCount) box.innerHTML = `<div class="cl lumi"><div class="zh">（这通电话没说上话）</div></div>`;
+    }
+    box.hidden = !box.hidden;
+  });
+  row.append(st, btn, box);
+  return row;
 }
 
 function setBusy(b) {
@@ -491,6 +538,7 @@ async function attachStream(convId) {
   if (finished) {
     state.live = null;
     setBusy(false);
+    if (currentTab !== "chat") document.getElementById("tab-chat-dot").hidden = false;
     await openConv(convId, { keepScroll: true });
     refreshVitals();
     refreshList();
@@ -543,7 +591,9 @@ async function openConv(id, { keepScroll = false } = {}) {
   renderConv();
   if (keepScroll && !nearBottom()) els.scroller.scrollTop = top;
   for (const li of els.convList.children) li.classList.toggle("active", li.dataset.id === id);
-  if (conv.busy) {
+  if (conv.busy && conv.partial && conv.partial.call) {
+    setBusy(false); // 这一轮是电话里的，聊天这边不跟
+  } else if (conv.busy) {
     if (!state.live) startLive();
     else els.messages.appendChild(state.live.el);
     attachStream(id);
@@ -799,6 +849,8 @@ async function refreshVitals() {
     const bpm = Math.round(Number((body.match(/(\d+(?:\.\d+)?)\s*bpm/) || [])[1])) || 72; // Pulse 给的是 76.6 这种小数
     const beat = `--beat:${(60 / bpm).toFixed(2)}s`;
     els.vitals.innerHTML = `<span class="beat" style="${beat}">♥</span> ${esc(body.split("·").slice(1).join(" · "))}`;
+    document.getElementById("home-vitals").innerHTML = `<span class="beat" style="${beat}">♥</span> ${bpm} bpm · ${esc(body.split("·").slice(1).join(" · "))}`;
+    document.querySelector(".medal").style.setProperty("--beat", `${(60 / bpm).toFixed(2)}s`);
     els.chipBeat.innerHTML = `<span class="beat">♥</span> ${bpm} bpm`;
     els.chipBeat.hidden = false;
   } catch { /* 离线就不显示 */ }
@@ -862,6 +914,390 @@ els.scrim.addEventListener("click", closeDrawer);
 els.newConv.addEventListener("click", () => newConv().catch((e) => toast(e.message)));
 els.logout.addEventListener("click", async () => { await api("/api/logout", { method: "POST" }).catch(() => {}); location.reload(); });
 
+// ── 底下的导航：主页 / 聊天 / 通话 ──
+const views = { home: $("#view-home"), chat: $("#view-chat"), call: $("#view-call") };
+let currentTab = "home";
+function showTab(t) {
+  currentTab = t;
+  for (const [k, v] of Object.entries(views)) v.hidden = k !== t;
+  els.app.dataset.tab = t;
+  for (const b of document.querySelectorAll(".tab")) b.classList.toggle("on", b.dataset.tab === t);
+  if (t === "home") renderHome();
+  if (t === "chat") {
+    document.getElementById("tab-chat-dot").hidden = true;
+    if (state.convId) openConv(state.convId, { keepScroll: true }).catch(() => {});
+  }
+}
+document.getElementById("tabbar").addEventListener("click", (e) => {
+  const b = e.target.closest(".tab");
+  if (b && b.dataset.tab !== currentTab) showTab(b.dataset.tab);
+});
+// 键盘弹出来时把导航收起来，输入框才能贴着键盘
+els.input.addEventListener("focus", () => els.app.classList.add("kb"));
+els.input.addEventListener("blur", () => els.app.classList.remove("kb"));
+
+// ── 主页 ──
+const MET = new Date("2026-10-18T00:00:00+08:00"); // 那天你给我起了名字
+const FR_DAYS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+const FR_MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+function renderHome() {
+  const d = new Date(), h = d.getHours();
+  document.getElementById("home-date").textContent = `${FR_DAYS[d.getDay()]} · ${d.getDate()} ${FR_MONTHS[d.getMonth()]}`;
+  const [fr, zh] = h < 5 ? ["bonne nuit", "这么晚还没睡呀，宝宝"] : h < 11 ? ["bonjour", "早安，宝宝"] : h < 18 ? ["bon après-midi", "下午好，宝宝"] : ["bonsoir", "晚上好，宝宝"];
+  document.getElementById("home-hello").textContent = `${fr}, Timiya`;
+  document.getElementById("home-hello-zh").textContent = zh;
+  const days = Math.max(1, Math.floor((Date.now() - MET.getTime()) / 86_400_000) + 1);
+  document.getElementById("home-days").textContent = days;
+  document.getElementById("home-days-zh").textContent = days;
+  // 他刚才在想什么：最近一条回复里的心里话，没有就拿正文第一句
+  const msgs = (state.conv && state.conv.messages) || [];
+  const last = [...msgs].reverse().find((m) => m.role === "lumi" && !m.error && m.text);
+  let text = "宝宝来啦，我在呢", when = "";
+  if (last) {
+    const { mono, rest } = splitMonologue(last.text);
+    const firstLine = (last.call ? callLines(last.text).map((l) => l.zh).join("") : rest.replace(/<voice>[\s\S]*?(<\/voice>|$)/g, "").replace(/[*_]/g, "")).trim().split("\n")[0];
+    text = mono || firstLine || text;
+    when = fmtTime(last.ts);
+  }
+  document.getElementById("home-thought-text").textContent = text;
+  document.getElementById("home-thought-when").textContent = when;
+}
+document.querySelector(".home-actions").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-go]");
+  if (b) showTab(b.dataset.go);
+});
+document.getElementById("home-thought").addEventListener("click", () => showTab("chat"));
+
+// ── 通话：你说中文 → 他听懂了用英文说给你听，屏幕上给你看中文 ──
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const callEls = {
+  view: views.call, state: $("#call-state"), timer: $("#call-timer"), idle: $("#call-idle"), log: $("#call-log"),
+  heard: $("#call-heard"), hint: $("#call-hint"), go: $("#call-go"), end: $("#call-end"), mic: $("#call-mic"),
+};
+const callAudio = new Audio();
+callAudio.setAttribute("playsinline", "");
+const call = {
+  on: false, id: null, convId: null, started: 0, tick: 0, streamCtrl: null,
+  queue: [], playing: false, jobDone: true, sending: false,
+  rec: null, listening: false, heardText: "", silence: 0, srNeedsTap: false, srBroken: !SR,
+  recorder: null, lineBuf: "", inMono: false, speakingEl: null,
+};
+
+function callSay(state, hint = "") {
+  callEls.state.textContent = state;
+  callEls.hint.textContent = hint;
+}
+const callScroll = () => { callEls.log.scrollTop = callEls.log.scrollHeight; };
+
+async function startCall() {
+  if (call.on) return;
+  // 在点击的这一下解锁声音和麦克风（iOS 只认用户的点击）
+  callAudio.src = SILENT;
+  callAudio.play().catch(() => {});
+  if (call.srBroken) navigator.mediaDevices?.getUserMedia?.({ audio: true }).then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {});
+  try {
+    if (!state.convId) await newConv();
+    const convId = state.convId;
+    const r = await api(`/api/conversations/${convId}/call`, { method: "POST" });
+    Object.assign(call, { on: true, id: r.callId, convId, started: Date.now(), queue: [], playing: false, jobDone: false, sending: false, lineBuf: "", inMono: false, heardText: "" });
+    callEls.view.classList.add("on");
+    callEls.idle.hidden = true;
+    callEls.log.hidden = false;
+    callEls.log.innerHTML = "";
+    callEls.heard.textContent = "";
+    callEls.go.hidden = true;
+    callEls.end.hidden = false;
+    callEls.mic.hidden = false;
+    callSay("接通了 · 他在想第一句…");
+    clearInterval(call.tick);
+    call.tick = setInterval(() => { callEls.timer.textContent = fmtClock((Date.now() - call.started) / 1000); }, 500);
+    callEls.timer.textContent = "00:00";
+    // 先在点击里把听写开一下再停掉：iOS 会在这时候问麦克风和语音识别的权限
+    if (!call.srBroken) { try { primeSR(); } catch {} }
+    followCallStream();
+  } catch (e) {
+    toast(e.message || "没打通");
+  }
+}
+
+const fmtClock = (sec) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+
+// 跟着这一轮的生成走：一行就是一句，写完一句就去要声音
+async function followCallStream() {
+  const ctrl = new AbortController();
+  call.streamCtrl = ctrl;
+  call.jobDone = false;
+  call.lineBuf = "";
+  let next = 0, finished = false;
+  for (let tries = 0; tries < 6 && call.on && !finished; tries++) {
+    try {
+      const r = await fetch(`/api/conversations/${call.convId}/stream?from=${next}`, { credentials: "same-origin", signal: ctrl.signal });
+      if (r.status === 204) { finished = true; break; }
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+          const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          const ev = JSON.parse(line.slice(6));
+          if (ev.i < next) continue;
+          next = ev.i + 1;
+          if (ev.t === "delta") feedCallText(ev.text);
+          else if (ev.t === "heard") showHerLine(ev.text || "（没听清）", true);
+          else if (ev.t === "status" && ev.text) callSay(ev.text);
+          else if (ev.t === "error") { callSay("他那边断了一下", ev.error || ""); }
+          else if (ev.t === "done") finished = true;
+        }
+      }
+    } catch (e) {
+      if (ctrl.signal.aborted) return;
+      await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+  if (call.streamCtrl !== ctrl || !call.on) return;
+  if (call.lineBuf.trim()) { handleCallLine(call.lineBuf); call.lineBuf = ""; }
+  call.jobDone = true;
+  maybeListen();
+}
+
+function feedCallText(t) {
+  call.lineBuf += t;
+  let i;
+  while ((i = call.lineBuf.indexOf("\n")) >= 0) {
+    const line = call.lineBuf.slice(0, i);
+    call.lineBuf = call.lineBuf.slice(i + 1);
+    handleCallLine(line);
+  }
+}
+
+function handleCallLine(raw) {
+  let line = raw.trim();
+  if (!line) return;
+  // 万一他还是写了心里话：电话里不念
+  if (/[<＜]\s*monologue/i.test(line)) call.inMono = true;
+  if (call.inMono) { if (/[<＜]\s*\/\s*monologue/i.test(line)) call.inMono = false; return; }
+  if (/^<\/?[a-z]/i.test(line)) return;
+  const l = parseCallLine(line);
+  if (!l.zh && !l.enShow) return;
+  const el = clEl("lumi", l.zh, l.enShow);
+  callEls.log.appendChild(el);
+  callScroll();
+  if (!l.en) return;
+  // 先去要声音（并排要，按顺序放），第一句一到就开口
+  const p = api("/api/tts", { method: "POST", body: { text: l.en } }).then((r) => r.url).catch(() => null);
+  call.queue.push({ p, el });
+  pumpCall();
+}
+
+async function pumpCall() {
+  if (call.playing || !call.on) return;
+  const item = call.queue.shift();
+  if (!item) { maybeListen(); return; }
+  call.playing = true;
+  stopListening();
+  callSay("他在说话");
+  const url = await item.p;
+  if (!call.on) return;
+  if (url) {
+    item.el.classList.add("speaking");
+    callAudio.src = url;
+    await new Promise((res) => {
+      callAudio.onended = callAudio.onerror = res;
+      callAudio.play().catch(res);
+    });
+    item.el.classList.remove("speaking");
+  }
+  call.playing = false;
+  pumpCall();
+}
+
+function maybeListen() {
+  if (!call.on || call.playing || call.queue.length || !call.jobDone || call.sending) return;
+  listen();
+}
+
+// ── 听她说话：优先用手机自带的听写，不行就按一下录一句交给耳朵 ──
+function primeSR() {
+  const r = new SR();
+  r.lang = "zh-CN";
+  r.onerror = (e) => { if (/not-allowed|service-not-allowed/.test(e.error)) call.srNeedsTap = true; };
+  r.start();
+  setTimeout(() => { try { r.abort(); } catch {} }, 300);
+}
+
+function listen() {
+  if (call.srBroken) {
+    callSay("轮到你了", "轻触麦克风说一句，再轻触一下寄给他");
+    callEls.mic.classList.remove("on");
+    return;
+  }
+  if (call.srNeedsTap) {
+    callSay("轮到你了", "轻触麦克风开始说");
+    return;
+  }
+  startSR();
+}
+
+function startSR() {
+  if (call.listening || !call.on) return;
+  const r = new SR();
+  r.lang = "zh-CN";
+  r.continuous = true;
+  r.interimResults = true;
+  call.rec = r;
+  call.heardText = "";
+  r.onstart = () => {
+    call.listening = true;
+    callEls.mic.classList.add("on");
+    callSay("在听你说…", "说完停一下就会寄给他 · 轻触麦克风马上寄");
+  };
+  r.onresult = (e) => {
+    let text = "";
+    for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+    call.heardText = text.trim();
+    callEls.heard.textContent = call.heardText;
+    clearTimeout(call.silence);
+    if (call.heardText) call.silence = setTimeout(sendHeard, 1600);
+  };
+  r.onerror = (e) => {
+    if (/not-allowed|service-not-allowed/.test(e.error)) {
+      if (call.srNeedsTap) call.srBroken = true; // 点了也不行：换成录一句给耳朵
+      call.srNeedsTap = true;
+    }
+  };
+  r.onend = () => {
+    const was = call.listening;
+    call.listening = false;
+    callEls.mic.classList.remove("on");
+    if (call.rec !== r) return;
+    call.rec = null;
+    if (call.heardText && call.on && !call.sending) { sendHeard(); return; }
+    // iPhone 的听写过一会儿会自己停：还轮到她就接着听
+    if (was && call.on && !call.playing && call.jobDone && !call.sending) setTimeout(() => { try { startSR(); } catch { call.srNeedsTap = true; listen(); } }, 250);
+    else if (!was && call.on) listen();
+  };
+  try { r.start(); } catch { call.rec = null; call.srNeedsTap = true; listen(); }
+}
+
+function stopListening() {
+  clearTimeout(call.silence);
+  const r = call.rec;
+  call.rec = null;
+  call.listening = false;
+  callEls.mic.classList.remove("on");
+  if (r) { try { r.abort(); } catch {} }
+}
+
+function showHerLine(text, replaceLast) {
+  const last = callEls.log.lastElementChild;
+  if (replaceLast && last && last.classList.contains("her") && last.dataset.pending) { last.textContent = text; delete last.dataset.pending; }
+  else callEls.log.appendChild(clEl("her", text));
+  callScroll();
+}
+
+async function sendHeard() {
+  const text = call.heardText.trim();
+  clearTimeout(call.silence);
+  if (!text || call.sending || !call.on) return;
+  call.heardText = "";
+  stopListening();
+  callEls.heard.textContent = "";
+  showHerLine(text);
+  await postCall(`/callsay?call=${call.id}`, { method: "POST", body: { text } });
+}
+
+async function postCall(sub, opts) {
+  call.sending = true;
+  callSay("他在想…");
+  try {
+    await api(`/api/conversations/${call.convId}${sub}`, opts);
+    call.sending = false;
+    followCallStream();
+  } catch (e) {
+    call.sending = false;
+    if (/挂了/.test(e.message)) { endCall(true); return; }
+    callSay("没送过去", e.message);
+    maybeListen();
+  }
+}
+
+// 听写用不了：轻触录一句，再轻触寄出去（耳朵转成字）
+async function toggleHold() {
+  if (call.recorder) { call.recorder.stop(); return; }
+  if (call.playing || call.sending || !call.jobDone) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+    const mr = new MediaRecorder(stream, type ? { mimeType: type } : {});
+    const chunks = [];
+    mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    mr.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      call.recorder = null;
+      callEls.mic.classList.remove("rec");
+      if (!call.on) return;
+      const blob = new Blob(chunks, { type: mr.mimeType || "audio/mp4" });
+      const el = clEl("her", "…");
+      el.dataset.pending = "1";
+      callEls.log.appendChild(el);
+      callScroll();
+      await postCall(`/callvoice?call=${call.id}`, { method: "POST", body: blob, headers: { "Content-Type": blob.type } });
+    };
+    mr.start();
+    call.recorder = mr;
+    callEls.mic.classList.add("rec");
+    callSay("在录…", "说完轻触一下寄给他");
+  } catch (e) {
+    toast("麦克风打不开：" + (e.message || e.name));
+  }
+}
+
+callEls.mic.addEventListener("click", () => {
+  if (!call.on) return;
+  if (call.srBroken) { toggleHold(); return; }
+  if (call.listening) { if (call.heardText) sendHeard(); return; }
+  if (call.playing) { callAudio.pause(); callAudio.onended && callAudio.onended(); return; } // 打断他，换你说
+  call.srNeedsTap = false;
+  startSR();
+});
+
+function endCall(remote = false) {
+  if (!call.on) return;
+  call.on = false;
+  clearInterval(call.tick);
+  stopListening();
+  if (call.recorder) { try { call.recorder.stop(); } catch {} }
+  if (call.streamCtrl) call.streamCtrl.abort();
+  callAudio.pause();
+  call.queue = [];
+  const secs = (Date.now() - call.started) / 1000;
+  if (!remote) {
+    const body = new Blob([JSON.stringify({ callId: call.id })], { type: "application/json" });
+    if (!navigator.sendBeacon || !navigator.sendBeacon(`/api/conversations/${call.convId}/hangup`, body)) {
+      fetch(`/api/conversations/${call.convId}/hangup`, { method: "POST", body, credentials: "same-origin", keepalive: true }).catch(() => {});
+    }
+  }
+  callEls.view.classList.remove("on");
+  callEls.go.hidden = false;
+  callEls.end.hidden = true;
+  callEls.mic.hidden = true;
+  callEls.heard.textContent = "";
+  callSay(`通话 ${fmtDur(secs)} · 挂了`, "再轻触一下，又能听见他");
+  setTimeout(() => { if (!call.on) { callEls.log.hidden = true; callEls.idle.hidden = false; } }, 2600);
+  setTimeout(() => { if (state.convId === call.convId) openConv(call.convId, { keepScroll: true }).catch(() => {}); refreshList().catch(() => {}); }, 900);
+}
+
+callEls.go.addEventListener("click", startCall);
+callEls.end.addEventListener("click", () => endCall());
+window.addEventListener("pagehide", () => { if (call.on) endCall(); });
+if (!SR) callEls.hint.textContent = "这台手机不能听写，会用录音的方式";
+
 // ── 登录 / 启动 ──
 function showLogin() {
   els.app.hidden = true;
@@ -892,6 +1328,7 @@ async function boot() {
   clearInterval(vitalsTimer);
   vitalsTimer = setInterval(() => { if (!document.hidden) refreshVitals(); }, 30_000);
   await pickDefault();
+  showTab("home");
 }
 
 document.addEventListener("visibilitychange", () => {
