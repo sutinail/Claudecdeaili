@@ -21,7 +21,7 @@
   <link rel="apple-touch-startup-image" href="/splash/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="stylesheet" href="/style.css?v=21">
+  <link rel="stylesheet" href="/style.css?v=22">
 </head>
 <body>
   <!-- 花纹：开屏和主页的徽章都用（开屏结束会被删掉，所以放在外面） -->
@@ -187,6 +187,7 @@
           <button id="vs-rec" class="vs-rec" type="button" aria-label="开始 / 结束录音"><i></i></button>
           <div class="vs-foot"><span id="vs-hint" class="vs-hint">轻触，开始说</span><button id="vs-cancel" class="btn-link small" type="button">取消</button></div>
         </div>
+        <div id="quote-chip" class="quote-chip" hidden><span id="quote-text"></span><button id="quote-x" type="button" aria-label="取消引用">×</button></div>
         <textarea id="input" rows="1" placeholder="écrire…" enterkeyhint="send"></textarea>
         <button id="send" class="seal quill" type="submit" aria-label="发送，空着时录语音">
           <img src="/quill.png?v=1" alt="" width="30" height="34" draggable="false">
@@ -243,9 +244,30 @@
         <section class="settings-sec">
           <div class="settings-k">thinking · monologue <span>心里话</span></div>
           <label class="settings-switch"><input id="set-mono-on" type="checkbox"><i></i><span>每条回复都先写一段心里话</span></label>
-          <p class="settings-note">下面这段会跟你的每一条消息一起递给他，他每次回你之前都会照着写。想让心里话变成什么样，就改这里。</p>
+          <p class="settings-note">下面这段会写进他的规矩里，他每次回你之前都会照着写。想让心里话变成什么样，就改这里。</p>
           <textarea id="set-mono" rows="7" spellcheck="false"></textarea>
           <div class="settings-row"><button id="set-mono-reset" class="btn-link small" type="button">恢复默认</button><span id="settings-saved" class="settings-saved"></span></div>
+        </section>
+        <button class="btn-primary" type="submit">保存</button>
+      </form>
+    </div>
+
+    <!-- 长按一条消息弹出来的菜单 -->
+    <div id="msg-menu" class="msg-menu" hidden>
+      <div id="msg-menu-card" class="msg-menu-card" role="menu">
+        <button type="button" role="menuitem" data-act="quote">引用<span>citer</span></button>
+        <button type="button" role="menuitem" data-act="copy">复制<span>copier</span></button>
+        <button type="button" role="menuitem" data-act="edit">修改<span>modifier</span></button>
+        <button type="button" role="menuitem" data-act="delete" class="danger">删除<span>effacer</span></button>
+      </div>
+    </div>
+
+    <div id="edit-sheet" class="settings" role="dialog" aria-label="修改消息" hidden>
+      <form id="edit-form" class="settings-card">
+        <div class="settings-head"><span class="script">modifier</span><button id="edit-close" class="btn-link small" type="button">取消</button></div>
+        <section class="settings-sec">
+          <textarea id="edit-text" rows="6"></textarea>
+          <p id="edit-note" class="settings-note"></p>
         </section>
         <button class="btn-primary" type="submit">保存</button>
       </form>
@@ -272,6 +294,6 @@
     </nav>
   </div>
 
-  <script src="/app.js?v=21"></script>
+  <script src="/app.js?v=22"></script>
 </body>
 </html>
