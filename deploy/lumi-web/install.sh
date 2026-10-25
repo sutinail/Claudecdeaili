@@ -16,7 +16,15 @@ CF_DIR=/opt/ombre-brain/cloudflared
 OMBRE_ENV=/opt/ombre-brain/.env
 PULSE_ENV=../pulse/.env
 
-command -v docker >/dev/null || fail "没有 Docker。先按 deploy/ombre-brain 的步骤装好"
+if ! command -v docker >/dev/null; then
+  if timeout 8 curl -fsS https://get.docker.com >/dev/null 2>&1; then
+    info "这台机器还没有 Docker，装一下（海外服务器走官方脚本，一两分钟）..."
+    curl -fsSL https://get.docker.com | sh >/dev/null 2>&1 || fail "Docker 没装上，按 deploy/ombre-brain 的步骤手动装"
+    ok "Docker 装好了"
+  else
+    fail "没有 Docker。先按 deploy/ombre-brain 的步骤装好"
+  fi
+fi
 [[ -f ../../CLAUDE.md ]] || fail "没找到仓库根目录的 CLAUDE.md，要在仓库里的 deploy/lumi-web 下运行"
 
 getv() { grep -E "^$1=" "$2" 2>/dev/null | head -1 | cut -d= -f2- || true; }
@@ -39,6 +47,23 @@ fi
 for k in PULSE_MCP_KEY PULSE_SECRET; do
   if [[ -z "$(getv $k .env)" && -n "$(getv $k "$PULSE_ENV")" ]]; then setv "$k" "$(getv $k "$PULSE_ENV")"; ok "从 Pulse 抄来了 $k"; fi
 done
+# 记忆和身体不在这台机器上（比如前端放在首尔、它们还在上海）：走公网地址，钥匙现场粘贴
+if [[ ! -f "$OMBRE_ENV" && ! -f "$PULSE_ENV" ]]; then
+  info "这台机器上没有 Ombre Brain / Pulse，改成连 ${OMBRE_PUBLIC:-https://ombre.gpt1126.top} 和 ${PULSE_PUBLIC:-https://pulse.gpt1126.top}"
+  grep -qE '^OMBRE_MCP_URL=' .env || setv OMBRE_MCP_URL "${OMBRE_PUBLIC:-https://ombre.gpt1126.top}/mcp"
+  grep -qE '^PULSE_MCP_URL=' .env || setv PULSE_MCP_URL "${PULSE_MCP_PUBLIC:-https://pulse-mcp.gpt1126.top}/sse"
+  grep -qE '^PULSE_API_URL=' .env || setv PULSE_API_URL "${PULSE_PUBLIC:-https://pulse.gpt1126.top}"
+  info "下面三把钥匙在上海那台服务器上查（另开一个 OrcaTerm 窗口，查完复制过来，别发进聊天、别截图）："
+  info "  Ombre Brain：sudo grep OMBRE_MCP_TOKEN /opt/ombre-brain/.env"
+  info "  Pulse：      grep -E 'PULSE_MCP_KEY|PULSE_SECRET' /opt/claudecdeaili/deploy/pulse/.env"
+  for k in OMBRE_MCP_TOKEN PULSE_MCP_KEY PULSE_SECRET; do
+    if [[ -z "$(getv $k .env)" ]]; then
+      read -rsp "粘贴 $k 的值（等号后面那串，不会显示，没有就回车跳过）: " V; echo
+      V="$(echo -n "$V" | tr -d '[:space:]')"
+      [[ -n "$V" ]] && setv "$k" "$V" && ok "$k 存好了" || true
+    fi
+  done
+fi
 [[ -n "$(getv OMBRE_MCP_TOKEN .env)" ]] || warn "没找到 OMBRE_MCP_TOKEN，记忆先不接（之后手动填进 .env 再跑一次本脚本）"
 [[ -n "$(getv PULSE_MCP_KEY .env)" ]] || warn "没找到 PULSE_MCP_KEY，身体先不接"
 
@@ -68,7 +93,7 @@ fi
 if [[ -z "$(getv ELEVENLABS_API_KEY .env)" ]]; then
   read -rsp "ElevenLabs API Key（不会显示，没有就直接回车跳过）: " XI; echo
   XI="$(echo -n "$XI" | tr -d '[:space:]')"
-  [[ -n "$XI" ]] && setv ELEVENLABS_API_KEY "$XI" && ok "语音条 Key 存好了"
+  [[ -n "$XI" ]] && setv ELEVENLABS_API_KEY "$XI" && ok "语音条 Key 存好了" || true
 fi
 
 # ── 5. 试一下能不能连上 Claude ──
@@ -103,7 +128,23 @@ if [[ -f "$CFG" ]]; then
     docker restart cloudflared >/dev/null && ok "隧道加上 $LUMI_HOST 并重启了"
   fi
 else
-  warn "没找到 $CFG，隧道要手动配（见 README）"
+  # 新机器：单独给前端建一条隧道 lumi（凭据放在 /opt/lumi-web/cloudflared）
+  CF_DIR=/opt/lumi-web/cloudflared
+  CF="docker run --rm -v $CF_DIR:/home/nonroot/.cloudflared cloudflare/cloudflared:latest"
+  mkdir -p "$CF_DIR" && chown 65532:65532 "$CF_DIR"
+  if [[ ! -f "$CF_DIR/cert.pem" ]]; then
+    echo
+    info "登录 Cloudflare：屏幕上会出现一个 https://dash.cloudflare.com/argotunnel?... 的网址，复制到电脑浏览器打开 → 点 gpt1126.top → Authorize"
+    docker run --rm -it -v "$CF_DIR:/home/nonroot/.cloudflared" cloudflare/cloudflared:latest tunnel login || warn "Cloudflare 没登录成功，可以重跑本脚本"
+  fi
+  if [[ -f "$CF_DIR/cert.pem" ]]; then
+    ls "$CF_DIR"/*.json >/dev/null 2>&1 || $CF tunnel create lumi || warn "隧道没建成"
+    $CF tunnel route dns lumi "$LUMI_HOST" || warn "DNS 路由没加上（已经有同名记录的话，去 Cloudflare 后台删掉 $LUMI_HOST 那条再重跑）"
+    docker rm -f cloudflared-lumi >/dev/null 2>&1 || true
+    docker run -d --name cloudflared-lumi --restart unless-stopped --network host -v "$CF_DIR:/home/nonroot/.cloudflared" \
+      cloudflare/cloudflared:latest tunnel --no-autoupdate --protocol http2 run --url http://localhost:8400 lumi >/dev/null \
+      && ok "隧道 lumi 跑起来了：$LUMI_HOST → 本机 8400"
+  fi
 fi
 
 echo
