@@ -80,12 +80,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
     radial-gradient(ellipse 40% 26% at 82% 46%, rgba(255,255,255,.75), transparent 72%),
     radial-gradient(ellipse 90% 40% at 50% 104%, rgba(200,200,208,.75), transparent 70%),
     linear-gradient(118deg, transparent 0 28%, rgba(255,255,255,.42) 33%, transparent 41%, transparent 58%, rgba(255,255,255,.28) 63%, transparent 70%),
-    url("/marble.jpg"),
     linear-gradient(172deg, #f5f5f7 0%, #e4e4e8 44%, #eeeef1 68%, #dcdce1 100%);
-  background-size: auto, auto, auto, auto, cover, auto;
   filter: grayscale(.9) contrast(.95) brightness(1.03);
 }
-.bg.custom .bg-img { inset: 0; background-size: cover; filter: grayscale(.85) contrast(.88) brightness(1.08); }
+.bg.custom .bg-img { inset: 0; background-size: cover; background-position: center; filter: none; }
 .bg-veil { position: absolute; inset: 0; background: linear-gradient(180deg, var(--veil-top) 0%, var(--veil-mid) 30%, var(--veil-mid) 62%, var(--veil-bot) 100%); }
 .bg-veil::after {
   content: ""; position: absolute; inset: 0; opacity: .22; mix-blend-mode: multiply;
@@ -316,7 +314,7 @@ html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoser
 /* ── 换背景的小面板 ── */
 .sheet {
   position: absolute; left: 14px; right: 14px; bottom: calc(100% + 8px); z-index: 5;
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 12px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px;
   border-radius: 22px; background: var(--frost-fill); border: 1px solid var(--frost-rim);
   box-shadow: 0 18px 40px -18px rgba(20,20,40,.45), inset 0 1px 0 var(--frost-rim);
   -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5);

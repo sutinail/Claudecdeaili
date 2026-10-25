@@ -503,12 +503,12 @@ async function refreshVitals() {
 }
 
 // ── 背景：自己挑一张照片，压小了存在这台手机上 ──
-const BG_PRESETS = { boiserie: "/bg/boiserie.svg", fenetre: "/bg/fenetre.svg", marble: "" };
+const BG_PRESETS = { ange: "/bg/ange.jpg", roses: "/bg/roses.jpg", perles: "/bg/perles.jpg", colonne: "/bg/colonne.jpg" };
 const bgSheet = document.getElementById("bg-sheet");
 function applyBg() {
-  let photo = null, preset = "boiserie";
-  try { photo = localStorage.getItem("lumi.bg"); preset = localStorage.getItem("lumi.bgPreset") || "boiserie"; } catch {}
-  const choice = photo ? "photo" : (preset in BG_PRESETS ? preset : "boiserie");
+  let photo = null, preset = "ange";
+  try { photo = localStorage.getItem("lumi.bg"); preset = localStorage.getItem("lumi.bgPreset") || "ange"; } catch {}
+  const choice = photo ? "photo" : (preset in BG_PRESETS ? preset : "ange");
   const url = photo || BG_PRESETS[choice];
   els.bgImg.style.backgroundImage = url ? `url("${url}")` : "";
   els.bg.classList.toggle("custom", !!url);
