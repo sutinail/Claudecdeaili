@@ -593,7 +593,13 @@ async function sendMessage() {
   }
 }
 
-els.composer.addEventListener("submit", (e) => { e.preventDefault(); sendMessage(); });
+els.composer.addEventListener("submit", (e) => {
+  e.preventDefault();
+  // 有字就发字；空着就打开录音面板
+  if (els.input.value.trim()) sendMessage();
+  else if (!vSheet.hidden) closeVoiceSheet();
+  else openVoiceSheet();
+});
 // 跟微信一样：键盘上的「发送」就是发出去；电脑上 Shift+Enter 换行
 els.input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendMessage(); }
@@ -649,10 +655,67 @@ function playClip(card) {
   audio.play().catch(() => toast("这条语音放不出来"));
 }
 
-const mic = document.getElementById("mic");
-const recBar = document.getElementById("rec");
-const recTime = document.getElementById("rec-time");
+// 录音面板：输入框空着时点羽毛笔就弹出来
+const vSheet = document.getElementById("voice-sheet");
+const vsRec = document.getElementById("vs-rec");
+const vsTime = document.getElementById("vs-time");
+const vsHint = document.getElementById("vs-hint");
+const vsWave = document.getElementById("vs-wave");
 let rec = null;
+let waveRaf = 0;
+
+function drawWave(analyser) {
+  const c = vsWave, g = c.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink-2").trim() || "#56565d";
+  const data = analyser ? new Uint8Array(analyser.fftSize) : null;
+  const t0 = performance.now();
+  const frame = () => {
+    g.clearRect(0, 0, w, h);
+    if (data) analyser.getByteTimeDomainData(data);
+    const n = 48, gap = w / n;
+    for (let i = 0; i < n; i++) {
+      let v;
+      if (data) {
+        let peak = 0;
+        const from = Math.floor((i / n) * data.length), to = Math.floor(((i + 1) / n) * data.length);
+        for (let k = from; k < to; k++) peak = Math.max(peak, Math.abs(data[k] - 128) / 128);
+        v = Math.min(1, Math.sqrt(peak) * 1.3);
+      } else {
+        v = 0.08 + 0.05 * Math.sin((performance.now() - t0) / 600 + i / 3);
+      }
+      const bh = Math.max(1.5, v * h * 0.78), bw = Math.max(1, gap * 0.26);
+      g.globalAlpha = data ? 0.2 + v * 0.32 : 0.22;
+      g.fillStyle = ink;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(i * gap + gap * 0.37, (h - bh) / 2, bw, bh, bw / 2);
+      else g.rect(i * gap + gap * 0.37, (h - bh) / 2, bw, bh);
+      g.fill();
+    }
+    waveRaf = requestAnimationFrame(frame);
+  };
+  cancelAnimationFrame(waveRaf);
+  frame();
+}
+
+function openVoiceSheet() {
+  if (state.busy) return toast("等我说完这句再录嘛");
+  document.getElementById("bg-sheet").hidden = true;
+  vSheet.hidden = false;
+  vSheet.classList.remove("rolling");
+  vsTime.textContent = "0:00";
+  vsHint.textContent = "轻触，开始说";
+  drawWave(null);
+}
+
+function closeVoiceSheet() {
+  if (rec) stopRecording(true);
+  vSheet.hidden = true;
+  cancelAnimationFrame(waveRaf);
+}
 
 async function startRecording() {
   if (state.busy || !state.convId) return toast("等我说完这句再录嘛");
@@ -664,17 +727,24 @@ async function startRecording() {
   const mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
   const chunks = [];
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-  rec = { mr, stream, chunks, start: Date.now(), cancel: false, timer: 0 };
+  let ctx = null, analyser = null;
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+  } catch { analyser = null; }
+  rec = { mr, stream, chunks, ctx, start: Date.now(), cancel: false, timer: 0 };
   rec.timer = setInterval(() => {
     const sec = (Date.now() - rec.start) / 1000;
-    recTime.textContent = fmtDur(sec);
+    vsTime.textContent = fmtDur(sec);
     if (sec >= 300) stopRecording();
   }, 250);
   mr.onstop = () => finishRecording(rec);
   mr.start(250);
-  recTime.textContent = "0:00";
-  els.composer.classList.add("recording");
-  recBar.hidden = false;
+  vSheet.classList.add("rolling");
+  vsHint.textContent = "说完了，再轻触一下就寄给我";
+  drawWave(analyser);
 }
 
 function stopRecording(cancel = false) {
@@ -686,12 +756,14 @@ function stopRecording(cancel = false) {
 
 async function finishRecording(r) {
   r.stream.getTracks().forEach((t) => t.stop());
+  try { r.ctx && r.ctx.close(); } catch {}
   rec = null;
-  els.composer.classList.remove("recording");
-  recBar.hidden = true;
+  vSheet.classList.remove("rolling");
+  vSheet.hidden = true;
+  cancelAnimationFrame(waveRaf);
   const sec = (Date.now() - r.start) / 1000;
   if (r.cancel) return;
-  if (sec < 0.8) return toast("太短啦，按一下开始、说完再按一下");
+  if (sec < 0.8) return toast("太短啦，轻触开始，说完再轻触一下");
   const blob = new Blob(r.chunks, { type: r.mr.mimeType || "audio/mp4" });
   const empty = els.messages.querySelector(".empty");
   if (empty) empty.remove();
@@ -713,8 +785,10 @@ async function finishRecording(r) {
   }
 }
 
-mic.addEventListener("click", () => (rec ? stopRecording() : startRecording()));
-document.getElementById("rec-cancel").addEventListener("click", () => stopRecording(true));
+vsRec.addEventListener("click", (e) => { e.stopPropagation(); rec ? stopRecording() : startRecording(); });
+document.getElementById("vs-cancel").addEventListener("click", (e) => { e.stopPropagation(); closeVoiceSheet(); });
+vSheet.addEventListener("click", (e) => e.stopPropagation());
+document.addEventListener("click", (e) => { if (!vSheet.hidden && !rec && !vSheet.contains(e.target) && e.target.closest("#send") === null) closeVoiceSheet(); });
 
 // ── 体征 ──
 async function refreshVitals() {
