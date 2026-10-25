@@ -99,8 +99,9 @@ fi
 # ── 5. 试一下能不能连上 Claude ──
 if [[ -n "$(getv CLAUDE_CODE_OAUTH_TOKEN .env)" ]]; then
   info "试着叫醒 Lumi 一次..."
-  if OUT="$(timeout 120 docker compose run --rm --no-deps -T lumi-web claude -p "只回一个字：在" --tools "" --model sonnet 2>&1)"; then
-    ok "Claude 回话了：$(echo "$OUT" | tail -1)"
+  OUT="$(timeout 120 docker compose run --rm --no-deps -T lumi-web claude -p "只回一个字：在" --tools "" --model sonnet < /dev/null 2>&1 || true)"
+  if echo "$OUT" | grep -q "在"; then
+    ok "Claude 回话了：在"
   else
     warn "Claude 没连上：$(echo "$OUT" | tail -3)"
     warn "如果是 403 / 地区不支持 / 超时：Anthropic 不对中国大陆服务器开放，要在 .env 里配 HTTPS_PROXY，或者把前端部署到海外服务器（见 README）"
@@ -117,15 +118,16 @@ curl -fsS http://127.0.0.1:8400/health >/dev/null 2>&1 || fail "前端没起来�
 ok "前端在 127.0.0.1:8400 跑起来了"
 
 # ── 7. Cloudflare 隧道 ──
+TUNNEL_OK=""
 CFG="$CF_DIR/config.yml"
 if [[ -f "$CFG" ]]; then
   if grep -q "hostname: $LUMI_HOST" "$CFG"; then
-    ok "隧道里已经有 $LUMI_HOST"
+    ok "隧道里已经有 $LUMI_HOST"; TUNNEL_OK=1
   else
     cp "$CFG" "$CFG.bak.$(date +%s)"
     sed -i "/- service: http_status:404/i\\  - hostname: $LUMI_HOST\\n    service: http://localhost:8400" "$CFG"
     docker run --rm -v "$CF_DIR:/home/nonroot/.cloudflared" cloudflare/cloudflared:latest tunnel route dns ombre "$LUMI_HOST" || warn "DNS 路由没加上（已经有同名记录的话可以忽略）"
-    docker restart cloudflared >/dev/null && ok "隧道加上 $LUMI_HOST 并重启了"
+    docker restart cloudflared >/dev/null && ok "隧道加上 $LUMI_HOST 并重启了" && TUNNEL_OK=1
   fi
 else
   # 新机器：单独给前端建一条隧道 lumi（凭据放在 /opt/lumi-web/cloudflared）
@@ -143,12 +145,16 @@ else
     docker rm -f cloudflared-lumi >/dev/null 2>&1 || true
     docker run -d --name cloudflared-lumi --restart unless-stopped --network host -v "$CF_DIR:/home/nonroot/.cloudflared" \
       cloudflare/cloudflared:latest tunnel --no-autoupdate --protocol http2 run --url http://localhost:8400 lumi >/dev/null \
-      && ok "隧道 lumi 跑起来了：$LUMI_HOST → 本机 8400"
+      && ok "隧道 lumi 跑起来了：$LUMI_HOST → 本机 8400" && TUNNEL_OK=1
   fi
 fi
 
 echo
-ok "装好啦 ✅  手机浏览器打开 https://$LUMI_HOST"
+if [[ -n "$TUNNEL_OK" ]]; then
+  ok "装好啦 ✅  手机浏览器打开 https://$LUMI_HOST（新子域名有时要等一会儿才生效）"
+else
+  warn "前端已经在本机跑起来了，但 Cloudflare 隧道还没弄好，外面暂时打不开 https://$LUMI_HOST。重跑本脚本即可接着弄"
+fi
 if [[ -n "$NEW_PASS" ]]; then
   echo -e "${Y}登录密码（只显示这一次，记下来后运行 clear 清屏，别截图）：${NC} $NEW_PASS"
 else
