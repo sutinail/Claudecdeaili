@@ -1,5 +1,5 @@
 // 只缓存页面外壳，接口一律走网络
-const CACHE = "lumi-shell-v2";
+const CACHE = "lumi-shell-v3";
 const SHELL = ["/", "/style.css", "/app.js", "/manifest.webmanifest", "/icon-192.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

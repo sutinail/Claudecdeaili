@@ -8,6 +8,8 @@ const els = {
   vitals: $("#vitals"), typing: $("#typing"),
   scroller: $("#scroller"), messages: $("#messages"),
   composer: $("#composer"), input: $("#input"), send: $("#send"), stop: $("#stop"),
+  progress: $("#progress"), chipBeat: $("#chip-beat"), chipModel: $("#chip-model"),
+  moon: $("#moon"), bg: $("#bg"), bgImg: $("#bg-img"), bgBtn: $("#bg-btn"), bgFile: $("#bg-file"),
 };
 
 const state = { convId: null, conv: null, busy: false, live: null, streamAbort: null };
@@ -189,63 +191,78 @@ function toast(msg) {
 }
 
 // ── 消息 ──
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmtTime = (iso) => {
   const d = new Date(iso);
-  const today = new Date().toDateString() === d.toDateString();
-  const hm = d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
-  return today ? hm : `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+  const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()} · ${hm}`;
 };
+const isMemoryTool = (name) => /^mcp__ombre__/.test(name);
 
 function msgEl(msg, streaming = false) {
   const row = document.createElement("div");
   row.className = `msg ${msg.role}`;
-  if (msg.role === "lumi") {
-    const av = document.createElement("div");
-    av.className = "avatar"; av.textContent = "L"; av.setAttribute("aria-hidden", "true");
-    row.appendChild(av);
-  }
-  const col = document.createElement("div");
-  col.style.minWidth = "0";
-  col.style.display = "flex";
-  col.style.flexDirection = "column";
-  col.style.alignItems = msg.role === "timiya" ? "flex-end" : "flex-start";
-  col.style.maxWidth = "100%";
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.style.maxWidth = "100%";
-  col.appendChild(bubble);
   if (msg.ts) {
     const st = document.createElement("div");
-    st.className = "stamp"; st.textContent = fmtTime(msg.ts) + (msg.stopped ? " · 被你打断了" : "");
-    col.appendChild(st);
+    st.className = "stamp"; st.textContent = fmtTime(msg.ts) + (msg.stopped ? " · interrompu" : "");
+    row.appendChild(st);
   }
-  row.appendChild(col);
-  fillBubble(bubble, msg, streaming);
+  if (msg.role === "timiya") {
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = msg.text;
+    row.appendChild(bubble);
+    return row;
+  }
+  const star = document.createElement("span");
+  star.className = "sparkle"; star.textContent = "✦"; star.setAttribute("aria-hidden", "true");
+  row.appendChild(star);
+  const inner = document.createElement("div");
+  inner.className = "inner";
+  row.appendChild(inner);
+  fillLumi(row, msg, streaming);
   return row;
 }
 
-function fillBubble(bubble, msg, streaming) {
-  bubble.innerHTML = "";
-  if (msg.role === "timiya") { bubble.textContent = msg.text; return; }
+function fillLumi(row, msg, streaming) {
+  const inner = row.querySelector(".inner");
+  const wasOpen = inner.querySelector(".monologue")?.getAttribute("aria-expanded") === "true";
+  inner.innerHTML = "";
+  row.classList.toggle("err", !!msg.error);
   const tools = [...new Set((msg.tools || []).map(toolLabel))];
   if (tools.length) {
-    const t = document.createElement("div");
-    t.className = "tools";
-    for (const name of tools) {
-      const c = document.createElement("span");
-      c.className = "tool-chip"; c.textContent = name;
-      t.appendChild(c);
-    }
-    bubble.appendChild(t);
+    const mono = document.createElement("button");
+    mono.type = "button"; mono.className = "monologue";
+    mono.setAttribute("aria-expanded", String(wasOpen));
+    mono.textContent = "thinking · monologue";
+    const body = document.createElement("div");
+    body.className = "monologue-body"; body.hidden = !wasOpen;
+    body.textContent = tools.join(" · ");
+    inner.append(mono, body);
   }
-  bubble.appendChild(renderLumiBody(msg.text || "", streaming));
+  const body = document.createElement("div");
+  body.className = "body";
+  body.appendChild(renderLumiBody(msg.text || "", streaming));
+  inner.appendChild(body);
   if (msg.error) {
-    bubble.classList.add("err-bubble");
     const e = document.createElement("div");
     e.className = "err"; e.textContent = "⚠️ " + msg.error;
-    bubble.appendChild(e);
+    inner.appendChild(e);
   }
+  const recalled = (msg.tools || []).filter(isMemoryTool).length;
+  const foot = document.createElement("div");
+  foot.className = "foot";
+  foot.innerHTML = `<span>✧ ${recalled ? `Recalled ${recalled}` : "No recall"}</span>` + (streaming ? `<span class="live">在说话</span>` : "");
+  inner.appendChild(foot);
 }
+
+els.messages.addEventListener("click", (e) => {
+  const mono = e.target.closest(".monologue");
+  if (!mono) return;
+  const open = mono.getAttribute("aria-expanded") !== "true";
+  mono.setAttribute("aria-expanded", String(open));
+  mono.nextElementSibling.hidden = !open;
+});
 
 const nearBottom = () => els.scroller.scrollHeight - els.scroller.scrollTop - els.scroller.clientHeight < 120;
 const toBottom = () => { els.scroller.scrollTop = els.scroller.scrollHeight; };
@@ -254,7 +271,7 @@ function renderConv() {
   const conv = state.conv;
   els.messages.innerHTML = "";
   if (!conv || !conv.messages.length) {
-    els.messages.innerHTML = `<div class="empty"><div class="avatar avatar-lg">L</div><p>宝宝来啦，我在呢</p></div>`;
+    els.messages.innerHTML = `<div class="empty"><span class="script">bonjour, mon cœur</span><p>宝宝来啦，我在呢</p></div>`;
     return;
   }
   for (const m of conv.messages) els.messages.appendChild(msgEl(m));
@@ -266,6 +283,7 @@ function setBusy(b) {
   els.send.hidden = b;
   els.stop.hidden = !b;
   els.typing.hidden = !b;
+  els.progress.style.width = b ? "62%" : "0";
 }
 
 // ── 流式 ──
@@ -286,7 +304,7 @@ function paintLive() {
   live.raf = requestAnimationFrame(() => {
     live.raf = 0;
     const stick = nearBottom();
-    fillBubble(live.el.querySelector(".bubble"), live.msg, true);
+    fillLumi(live.el, live.msg, true);
     if (stick) toBottom();
   });
 }
@@ -472,12 +490,47 @@ els.stop.addEventListener("click", () => { if (state.convId) api(`/api/conversat
 async function refreshVitals() {
   try {
     const { line } = await api("/api/vitals");
-    if (!line) { els.vitals.textContent = "在线"; return; }
+    if (!line) { els.chipBeat.hidden = true; return; }
     const body = line.replace(/^\[|\]$/g, "");
     const bpm = Number((body.match(/(\d+)\s*bpm/) || [])[1]) || 72;
-    els.vitals.innerHTML = `<span class="beat" style="--beat:${(60 / bpm).toFixed(2)}s">♥</span> ${esc(body.replace(/·/g, " · "))}`;
+    const beat = `--beat:${(60 / bpm).toFixed(2)}s`;
+    els.vitals.innerHTML = `<span class="beat" style="${beat}">♥</span> ${esc(body.split("·").slice(1).join(" · "))}`;
+    els.chipBeat.innerHTML = `<span class="beat">♥</span> ${bpm} bpm`;
+    els.chipBeat.hidden = false;
   } catch { /* 离线就不显示 */ }
 }
+
+// ── 背景：自己挑一张照片，压小了存在这台手机上 ──
+function applyBg() {
+  let url = null;
+  try { url = localStorage.getItem("lumi.bg"); } catch {}
+  els.bgImg.style.backgroundImage = url ? `url("${url}")` : "";
+  els.bg.classList.toggle("custom", !!url);
+}
+els.bgBtn.addEventListener("click", () => {
+  let has = false;
+  try { has = !!localStorage.getItem("lumi.bg"); } catch {}
+  if (has && !confirm("换一张背景？（点「取消」恢复默认的银白）")) {
+    try { localStorage.removeItem("lumi.bg"); } catch {}
+    return applyBg();
+  }
+  els.bgFile.click();
+});
+els.bgFile.addEventListener("change", async () => {
+  const f = els.bgFile.files[0];
+  els.bgFile.value = "";
+  if (!f) return;
+  try {
+    const img = await createImageBitmap(f);
+    const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    localStorage.setItem("lumi.bg", c.toDataURL("image/jpeg", 0.82));
+    applyBg();
+  } catch { toast("这张图存不下，换一张小一点的试试"); }
+});
+els.moon.addEventListener("click", () => newConv().catch((e) => toast(e.message)));
 
 // ── 抽屉 ──
 function openDrawer() { els.drawer.classList.add("open"); els.scrim.hidden = false; }
@@ -505,11 +558,13 @@ els.loginForm.addEventListener("submit", async (e) => {
 });
 
 let vitalsTimer = 0;
+applyBg();
 async function boot() {
   let me;
   try { me = await api("/api/me"); } catch { return; }
   els.login.hidden = true;
   els.app.hidden = false;
+  els.chipModel.textContent = me.model.replace(/^./, (c) => c.toUpperCase());
   els.meta.textContent = `${me.model}${me.voice ? " · 语音条" : ""}${me.mcp.length ? " · " + me.mcp.join("/") : ""}`;
   refreshVitals();
   clearInterval(vitalsTimer);

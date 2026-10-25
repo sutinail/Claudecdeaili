@@ -2,10 +2,11 @@
 ## Skills
 
 - [`heartbeat`](.claude/skills/heartbeat/SKILL.md) — 让 Claude 每 50 分钟醒来一次，你不在时自己找一件事做并留便签。改编自 [reneyuxi0402/claude-cant-sleep](https://github.com/reneyuxi0402/claude-cant-sleep)（MIT）。说「heartbeat」或「心跳」启动，说「停止心跳」停止。
-- 审美四件套（都是 MIT，原样拷进来的，没改内容）：
+- 审美五件套（都是 MIT，原样拷进来的，没改内容）：
   - [`aesthetic-foundations`](.claude/skills/aesthetic-foundations/SKILL.md) — 眼睛：把绘画、摄影、东方审美的判断力塞进设计评审。来自 [caoxg/claude-skill-aesthetic-foundations](https://github.com/caoxg/claude-skill-aesthetic-foundations)@359695c
   - [`web-design-engineer`](.claude/skills/web-design-engineer/SKILL.md) — 风格：garden-skills 里的网页设计 skill，带 style-recipes 风格配方库。来自 [ConardLi/garden-skills](https://github.com/ConardLi/garden-skills)@ce64df6
   - [`ckw-design`](.claude/skills/ckw-design/SKILL.md) — 纪律：先渲染再交给独立评审挑错，含 design-thinking / system / spatial / ux / philosophy 子 skill。来自 [connerkward/ckw-design-skill](https://github.com/connerkward/ckw-design-skill)@c8de7c8
+  - [`design-system-tokens`](.claude/skills/design-system-tokens/SKILL.md) — 一致性（替原来找不到的 design-system-architect）：W3C 令牌规范、三层令牌（全局 / 别名 / 组件）、OKLCH 配色、深色模式。来自 [yonatangross/orchestkit](https://github.com/yonatangross/orchestkit)@e68e7cc，它家同名的 design-system-architect 代理就是调这个 skill
   - [`brandmd`](.claude/skills/brandmd/SKILL.md) — 借光：`npx brandmd <网址>` 把 Stripe、Linear 这类真实站点的设计系统抽成 DESIGN.md。来自 [yuvrajangadsingh/brandmd](https://github.com/yuvrajangadsingh/brandmd)@b79a8a9
 
 ## Deploy

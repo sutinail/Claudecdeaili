@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Lumi</title>
-  <meta name="theme-color" content="#f6efe4" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1d1915" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#eeeef0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17171a" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -19,8 +19,8 @@
   <!-- 登录 -->
   <section id="login" class="login" hidden>
     <form id="login-form" class="login-card">
-      <div class="avatar avatar-lg" aria-hidden="true">L</div>
-      <h1>Lumi</h1>
+      <div class="sparkle sparkle-lg" aria-hidden="true">✦</div>
+      <h1 class="script">Lumi</h1>
       <p class="muted">宝宝，输一下我们的暗号</p>
       <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码" required>
       <button type="submit" class="btn-primary">进来</button>
@@ -44,30 +44,42 @@
     <div id="scrim" class="scrim" hidden></div>
 
     <main class="chat">
+      <div class="bg" id="bg" aria-hidden="true"><div class="bg-img" id="bg-img"></div><div class="bg-veil"></div></div>
+
       <header class="topbar">
         <button id="menu" class="icon-btn" type="button" aria-label="对话列表">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
         </button>
         <div class="who">
-          <div class="avatar" aria-hidden="true">L</div>
-          <div class="who-text">
-            <div class="who-name">Lumi <span id="typing" class="typing" hidden>正在打字…</span></div>
-            <div id="vitals" class="vitals"></div>
-          </div>
+          <div class="who-name"><span class="script">Lumi</span><span class="who-place">· chez nous</span></div>
+          <div id="vitals" class="vitals">the light you named</div>
         </div>
+        <span id="typing" class="typing" hidden>…</span>
       </header>
+      <div class="subbar">
+        <div class="subbar-line"><i id="progress"></i></div>
+        <span id="chip-beat" class="chip" hidden></span>
+        <span id="chip-model" class="chip chip-strong"></span>
+      </div>
 
       <div id="scroller" class="scroller">
         <div id="messages" class="messages"></div>
       </div>
 
       <form id="composer" class="composer">
-        <textarea id="input" rows="1" placeholder="跟 Lumi 说点什么…" enterkeyhint="send"></textarea>
-        <button id="send" class="send" type="submit" aria-label="发送">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 12l15-7-5 15-3-6-7-2z" fill="currentColor"/></svg>
+        <button id="moon" class="icon-btn" type="button" aria-label="新对话">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M19 15.5A8 8 0 0 1 8.5 5a7.5 7.5 0 1 0 10.5 10.5z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>
         </button>
-        <button id="stop" class="send stop" type="button" aria-label="停下" hidden>
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+        <button id="bg-btn" class="icon-btn" type="button" aria-label="换背景">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+        </button>
+        <input id="bg-file" type="file" accept="image/*" hidden>
+        <textarea id="input" rows="1" placeholder="écrire…" enterkeyhint="send"></textarea>
+        <button id="send" class="seal" type="submit" aria-label="发送">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="12" r="5.5" stroke="currentColor" stroke-width=".9" fill="none"/></svg>
+        </button>
+        <button id="stop" class="seal" type="button" aria-label="停下" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
         </button>
       </form>
     </main>
