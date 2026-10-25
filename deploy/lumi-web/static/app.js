@@ -290,25 +290,73 @@ function msgEl(msg, streaming = false) {
   return row;
 }
 
+// Lumi 在回复最前面写的 <monologue> 心里话，收进 thinking · monologue 里，不放在正文
+function splitMonologue(text) {
+  const m = text.match(/^\s*<monologue>([\s\S]*?)(<\/monologue>|$)/);
+  if (!m) {
+    // 流式刚开头，标签还没打完整时先藏起来
+    if (/^\s*<m?o?n?o?l?o?g?u?e?>?$/i.test(text) && text.trim()) return { mono: "", rest: "" };
+    return { mono: "", rest: text };
+  }
+  return { mono: m[1].trim(), rest: m[2] ? text.slice(m.index + m[0].length).replace(/^\s+/, "") : "" };
+}
+
+// 一步工具：它是什么、我填了什么、身体或记忆回了什么
+function stepSummary(name, input) {
+  if (!input) return "";
+  const short = String(name).split("__").pop();
+  const pick = (...keys) => keys.map((k) => input[k]).filter((v) => typeof v === "string" && v.trim());
+  let parts;
+  if (short === "sense") parts = [input.scene && `场景：${input.scene}`, input.part && `部位：${input.part}`].filter(Boolean);
+  else if (/^(hold|grow|anchor|letter_write)$/.test(short)) parts = pick("title", "content").slice(0, 1);
+  else parts = pick("query", "text", "title", "content", "name").slice(0, 1);
+  return parts.join(" · ").replace(/\s+/g, " ").slice(0, 80);
+}
+
+function stepEl(s) {
+  const row = document.createElement("div");
+  row.className = "mono-step" + (s.error ? " err" : "");
+  const head = document.createElement("div");
+  head.className = "mono-step-head";
+  const sum = stepSummary(s.name, s.input);
+  head.textContent = toolLabel(s.name) + (sum ? `　${sum}` : "");
+  row.appendChild(head);
+  if (s.result) {
+    const res = document.createElement("div");
+    res.className = "mono-step-result";
+    const first = s.result.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 2).join("　");
+    res.textContent = first.slice(0, 120) + (first.length > 120 ? "…" : "");
+    row.appendChild(res);
+  }
+  return row;
+}
+
 function fillLumi(row, msg, streaming) {
   const inner = row.querySelector(".inner");
   const wasOpen = inner.querySelector(".monologue")?.getAttribute("aria-expanded") === "true";
   inner.innerHTML = "";
   row.classList.toggle("err", !!msg.error);
-  const tools = [...new Set((msg.tools || []).map(toolLabel))];
-  if (tools.length) {
+  const { mono: monoText, rest } = splitMonologue(msg.text || "");
+  const steps = msg.steps && msg.steps.length ? msg.steps : (msg.tools || []).map((name) => ({ name }));
+  if (monoText || steps.length) {
     const mono = document.createElement("button");
     mono.type = "button"; mono.className = "monologue";
     mono.setAttribute("aria-expanded", String(wasOpen));
     mono.textContent = "thinking · monologue";
-    const body = document.createElement("div");
-    body.className = "monologue-body"; body.hidden = !wasOpen;
-    body.textContent = tools.join(" · ");
-    inner.append(mono, body);
+    const box = document.createElement("div");
+    box.className = "monologue-body"; box.hidden = !wasOpen;
+    if (monoText) {
+      const p = document.createElement("div");
+      p.className = "mono-thought";
+      p.textContent = monoText;
+      box.appendChild(p);
+    }
+    for (const s of steps) box.appendChild(stepEl(s));
+    inner.append(mono, box);
   }
   const body = document.createElement("div");
   body.className = "body";
-  body.appendChild(renderLumiBody(msg.text || "", streaming));
+  body.appendChild(renderLumiBody(rest, streaming));
   inner.appendChild(body);
   if (msg.error) {
     const e = document.createElement("div");
@@ -403,6 +451,11 @@ async function attachStream(convId) {
         live.next = ev.i + 1;
         if (ev.t === "delta") live.msg.text += ev.text;
         else if (ev.t === "tool") live.msg.tools.push(ev.name);
+        else if (ev.t === "step") {
+          live.msg.steps = live.msg.steps || [];
+          const i = live.msg.steps.findIndex((s) => s.id === ev.step.id);
+          if (i >= 0) live.msg.steps[i] = ev.step; else live.msg.steps.push(ev.step);
+        }
         else if (ev.t === "error") live.msg.error = ev.error;
         else if (ev.t === "done") finished = true;
         paintLive();

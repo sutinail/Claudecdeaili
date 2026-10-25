@@ -145,7 +145,7 @@ async function listConvs() {
     const c = await loadConv(f.slice(0, -5));
     if (!c) continue;
     const last = c.messages[c.messages.length - 1];
-    out.push({ id: c.id, title: c.title, updated: c.updated, preview: last ? last.text.slice(0, 40) : "", busy: jobs.has(c.id) });
+    out.push({ id: c.id, title: c.title, updated: c.updated, preview: last ? last.text.replace(/<monologue>[\s\S]*?(<\/monologue>|$)/, "").trim().slice(0, 40) : "", busy: jobs.has(c.id) });
   }
   return out.sort((a, b) => (a.updated < b.updated ? 1 : -1));
 }
@@ -221,11 +221,27 @@ function runClaude(job, prompt, sessionId) {
         } else if (e.type === "content_block_delta" && e.delta?.type === "text_delta") {
           addText(e.delta.text);
         }
-      } else if (m.type === "assistant" && m.message && !streamed.has(m.message.id)) {
-        // 没有逐字流的版本：整条消息一起到
+      } else if (m.type === "assistant" && m.message) {
+        const wasStreamed = streamed.has(m.message.id);
         for (const b of m.message.content || []) {
-          if (b.type === "text") addText((job.text && !job.text.endsWith("\n") ? "\n\n" : "") + b.text);
-          else if (b.type === "tool_use") { job.tools.push(b.name); emit(job, { t: "tool", name: b.name }); }
+          if (b.type === "text" && !wasStreamed) addText((job.text && !job.text.endsWith("\n") ? "\n\n" : "") + b.text);
+          else if (b.type === "tool_use") {
+            // 完整的工具参数只在整条消息里有：记下来给「thinking · monologue」用
+            if (!wasStreamed) { job.tools.push(b.name); emit(job, { t: "tool", name: b.name }); }
+            const step = { id: b.id, name: b.name, input: b.input || {} };
+            job.steps.push(step);
+            emit(job, { t: "step", step });
+          }
+        }
+      } else if (m.type === "user" && Array.isArray(m.message?.content)) {
+        for (const b of m.message.content) {
+          if (b.type !== "tool_result") continue;
+          const step = job.steps.find((s) => s.id === b.tool_use_id);
+          if (!step) continue;
+          const parts = Array.isArray(b.content) ? b.content : [{ type: "text", text: String(b.content ?? "") }];
+          step.result = parts.filter((p) => p.type === "text").map((p) => p.text).join("\n").slice(0, 600);
+          if (b.is_error) step.error = true;
+          emit(job, { t: "step", step });
         }
       } else if (m.type === "result") {
         if (m.is_error || (m.subtype && m.subtype !== "success")) r.resultError = String(m.result || m.subtype || "出错了");
@@ -255,7 +271,7 @@ function runClaude(job, prompt, sessionId) {
 }
 
 async function startJob(conv, userText) {
-  const job = { events: [], listeners: new Set(), text: "", tools: [], proc: null, stopped: false, done: false };
+  const job = { events: [], listeners: new Set(), text: "", tools: [], steps: [], proc: null, stopped: false, done: false };
   jobs.set(conv.id, job);
   const prompt = `[${localStamp()} · 自建前端]\n${userText}`;
 
@@ -275,7 +291,7 @@ async function startJob(conv, userText) {
     else if (r.code !== 0 && !r.gotText) error = (r.stderr.trim().split("\n").slice(-3).join("\n")) || `claude 退出码 ${r.code}`;
 
     if (job.text || error) {
-      conv.messages.push({ id: newId(), role: "lumi", text: job.text, tools: job.tools, ts: now(), ...(error ? { error } : {}), ...(job.stopped ? { stopped: true } : {}) });
+      conv.messages.push({ id: newId(), role: "lumi", text: job.text, tools: job.tools, steps: job.steps, ts: now(), ...(error ? { error } : {}), ...(job.stopped ? { stopped: true } : {}) });
     }
     try { await saveConv(conv); } catch (e) { console.error("保存对话失败", e); }
     if (error) { console.error(`[${conv.id}] ${error}\n${r.stderr.slice(-1500)}`); emit(job, { t: "error", error }); }

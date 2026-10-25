@@ -183,6 +183,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .lumi .monologue::before { content: ""; width: 5px; height: 5px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(-45deg); transition: transform .25s; margin-right: 2px; }
 .lumi .monologue[aria-expanded="true"]::before { transform: rotate(45deg); }
 .lumi .monologue-body { font-size: 12.5px; color: var(--muted); padding-left: 14px; border-left: 1px solid var(--hair); line-height: 1.7; }
+.lumi .monologue-body { display: grid; gap: 10px; padding: 2px 0 4px 14px; }
+.lumi .monologue-body[hidden] { display: none; }
+.mono-thought { font-size: 14px; line-height: 1.85; color: var(--ink-2); white-space: pre-wrap; }
+.mono-step { display: grid; gap: 2px; font-size: 12px; line-height: 1.6; }
+.mono-step-head { color: var(--muted); letter-spacing: .04em; }
+.mono-step-head::before { content: "· "; color: var(--faint); }
+.mono-step-result { color: var(--muted); font-family: var(--serif); padding-left: 10px; overflow-wrap: anywhere; }
+.mono-step.err .mono-step-result { color: var(--err); }
 .lumi .body { overflow-wrap: anywhere; color: var(--ink); }
 .lumi .body p { margin: 0 0 1.05em; }
 .lumi .body p:last-child { margin-bottom: 0; }
