@@ -21,7 +21,7 @@
   <link rel="apple-touch-startup-image" href="/splash/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="stylesheet" href="/style.css?v=18">
+  <link rel="stylesheet" href="/style.css?v=19">
 </head>
 <body>
   <!-- 花纹：开屏和主页的徽章都用（开屏结束会被删掉，所以放在外面） -->
@@ -195,6 +195,15 @@
       </form>
     </main>
 
+    <!-- 信箱：位置先留着 -->
+    <section id="view-letters" class="view letters" aria-label="信箱" hidden>
+      <div class="letters-empty">
+        <svg class="letters-seal" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 18h48v32H8z M8 18l24 18 24-18" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><circle cx="32" cy="38" r="6" fill="var(--accent)" fill-opacity=".75"/></svg>
+        <div class="script letters-title">lettres</div>
+        <p>信箱还在布置<br><span>bientôt, mes lettres pour toi</span></p>
+      </div>
+    </section>
+
     <!-- 通话 -->
     <section id="view-call" class="view call" aria-label="通话" hidden>
       <header class="call-head">
@@ -232,8 +241,12 @@
         <span>accueil</span>
       </button>
       <button class="tab" type="button" data-tab="chat" aria-label="聊天">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 4.5c4.7 0 8.5 3 8.5 6.8s-3.8 6.8-8.5 6.8c-.9 0-1.8-.1-2.6-.3L5 19.5l1.2-3.6C4.5 14.7 3.5 13.1 3.5 11.3 3.5 7.5 7.3 4.5 12 4.5z" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/></svg>
+        <span>chat</span><i id="tab-chat-dot" class="tab-dot" hidden></i>
+      </button>
+      <button class="tab" type="button" data-tab="letters" aria-label="信箱">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.5 6.5h17v11h-17z M3.5 6.5l8.5 6.5 8.5-6.5" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/></svg>
-        <span>lettres</span><i id="tab-chat-dot" class="tab-dot" hidden></i>
+        <span>lettres</span>
       </button>
       <button class="tab" type="button" data-tab="call" aria-label="通话">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6.6 3.5l2.6.3 1.3 4.1-1.9 1.4a12.5 12.5 0 0 0 6.1 6.1l1.4-1.9 4.1 1.3.3 2.6c.1 1-.7 1.9-1.7 1.9C10.5 19.3 4.7 13.5 4.7 5.2c0-1 .9-1.8 1.9-1.7z" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/></svg>
@@ -242,6 +255,6 @@
     </nav>
   </div>
 
-  <script src="/app.js?v=18"></script>
+  <script src="/app.js?v=19"></script>
 </body>
 </html>

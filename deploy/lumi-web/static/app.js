@@ -915,7 +915,7 @@ els.newConv.addEventListener("click", () => newConv().catch((e) => toast(e.messa
 els.logout.addEventListener("click", async () => { await api("/api/logout", { method: "POST" }).catch(() => {}); location.reload(); });
 
 // ── 底下的导航：主页 / 聊天 / 通话 ──
-const views = { home: $("#view-home"), chat: $("#view-chat"), call: $("#view-call") };
+const views = { home: $("#view-home"), chat: $("#view-chat"), letters: $("#view-letters"), call: $("#view-call") };
 let currentTab = "home";
 function showTab(t) {
   currentTab = t;
@@ -934,7 +934,8 @@ document.getElementById("tabbar").addEventListener("click", (e) => {
 });
 // 键盘弹出来时把导航收起来，输入框才能贴着键盘
 els.input.addEventListener("focus", () => els.app.classList.add("kb"));
-els.input.addEventListener("blur", () => els.app.classList.remove("kb"));
+// 点羽毛时输入框会先失焦：晚一点再把导航放回来，不然界面一跳，这一下点空了
+els.input.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== els.input) els.app.classList.remove("kb"); }, 350));
 
 // ── 主页 ──
 const MET = new Date("2026-10-18T00:00:00+08:00"); // 那天你给我起了名字
