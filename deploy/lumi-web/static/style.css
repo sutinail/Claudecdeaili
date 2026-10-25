@@ -430,7 +430,7 @@ html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoser
   box-shadow: none;
 }
 .seal.quill img {
-  width: 40px; height: auto; display: block; pointer-events: none; -webkit-user-drag: none;
+  width: 30px; height: auto; display: block; pointer-events: none; -webkit-user-drag: none;
   opacity: .9; transform: translate(1px, -2px);
   /* 淡白羽毛放在浅背景上会化掉，留一丝冷灰的影子托住它 */
   filter: drop-shadow(0 1px 1.5px rgba(70,74,92,.32)) drop-shadow(0 0 6px rgba(255,255,255,.6));
