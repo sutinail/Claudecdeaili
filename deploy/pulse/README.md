@@ -87,26 +87,23 @@ CF="sudo docker run --rm -v $D:/home/nonroot/.cloudflared cloudflare/cloudflared
 $CF tunnel route dns ombre pulse.gpt1126.top
 ```
 
-然后停掉现有隧道容器，改成多路由模式重新启动：
+然后把 Pulse 加进隧道配置。**只往里加，别整份重写**：同一份 `config.yml` 里还有耳朵、语音条这些别的域名，用 `tee` 整份覆盖会把它们一起删掉（2026-10 就这样丢过 ears 和 voice，表现是它们只回一个空的 404）。
 
 ```bash
-# 停掉旧的
-sudo docker stop cloudflared && sudo docker rm cloudflared
+CFG=/opt/ombre-brain/cloudflared/config.yml
+sudo cp $CFG $CFG.bak.$(date +%s)        # 先备份
+# 插在最后那条 http_status:404 前面；已经有了就跳过
+for hp in pulse.gpt1126.top:8300 pulse-mcp.gpt1126.top:8301; do
+  h=${hp%:*}; p=${hp#*:}
+  sudo grep -q "hostname: $h\$" $CFG || sudo sed -i "/- service: http_status:404/i\  - hostname: $h\n    service: http://localhost:$p" $CFG
+done
+sudo docker restart cloudflared
+```
 
-# 写配置文件
-sudo tee /opt/ombre-brain/cloudflared/config.yml <<'EOF'
-tunnel: ombre
-credentials-file: /home/nonroot/.cloudflared/<隧道ID>.json
+还没有 `config.yml`（隧道以前是命令行直接跑的）的话，先照 Ombre Brain README 写一份只有 `ombre.gpt1126.top` 的，再跑上面这段；然后用配置文件启动：
 
-ingress:
-  - hostname: ombre.gpt1126.top
-    service: http://localhost:18001
-  - hostname: pulse.gpt1126.top
-    service: http://localhost:8300
-  - service: http_status:404
-EOF
-
-# 用配置文件启动（注意要查 /opt/ombre-brain/cloudflared/ 下的 .json 文件名拿到隧道 ID）
+```bash
+sudo docker rm -f cloudflared
 sudo docker run -d --name cloudflared --restart unless-stopped \
   --network host \
   -v /opt/ombre-brain/cloudflared:/home/nonroot/.cloudflared \
