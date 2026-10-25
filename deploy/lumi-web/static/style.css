@@ -21,7 +21,7 @@
   --glass: rgba(255, 255, 255, .46);
   --glass-strong: rgba(255, 255, 255, .74);
   --veil-top: rgba(243, 243, 245, .70);
-  --veil-mid: rgba(243, 243, 245, .22);
+  --veil-mid: rgba(243, 243, 245, .12);
   --veil-bot: rgba(243, 243, 245, .88);
   --accent: #a0505c;          /* 唯一的一点颜色：在说话的小红点、心跳 */
   --err: #a3473b;
@@ -76,8 +76,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
     radial-gradient(ellipse 40% 26% at 82% 46%, rgba(255,255,255,.75), transparent 72%),
     radial-gradient(ellipse 90% 40% at 50% 104%, rgba(200,200,208,.75), transparent 70%),
     linear-gradient(118deg, transparent 0 28%, rgba(255,255,255,.42) 33%, transparent 41%, transparent 58%, rgba(255,255,255,.28) 63%, transparent 70%),
+    url("/marble.jpg"),
     linear-gradient(172deg, #f5f5f7 0%, #e4e4e8 44%, #eeeef1 68%, #dcdce1 100%);
-  filter: grayscale(.9) contrast(.9) brightness(1.05);
+  background-size: auto, auto, auto, auto, cover, auto;
+  filter: grayscale(.9) contrast(.95) brightness(1.03);
 }
 .bg.custom .bg-img { inset: 0; filter: grayscale(.85) contrast(.88) brightness(1.08); }
 .bg-veil { position: absolute; inset: 0; background: linear-gradient(180deg, var(--veil-top) 0%, var(--veil-mid) 30%, var(--veil-mid) 62%, var(--veil-bot) 100%); }
@@ -170,7 +172,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid var(--hair); box-shadow: var(--shadow);
   -webkit-backdrop-filter: blur(16px) saturate(1.15); backdrop-filter: blur(16px) saturate(1.15);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .timiya .bubble { background: linear-gradient(180deg, rgba(60,60,70,.6), rgba(40,40,48,.45)); } }
 
 /* Lumi：不要气泡，字直接落在背景上；一颗细星对齐第一行 */
 .msg.lumi { padding-left: 30px; position: relative; }
@@ -260,3 +261,50 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .topbar .icon-btn { display: inline-grid; align-self: flex-start; margin-top: 12px; }
   .messages { padding: 10px 20px 20px; }
 }
+
+/* ── 气泡材质：毛玻璃（默认） / 液态玻璃 ── */
+:root { --frost-fill: rgba(255,255,255,.30); --frost-rim: rgba(255,255,255,.62); --liquid-fill: rgba(255,255,255,.10); --liquid-spec: rgba(255,255,255,.95); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --frost-fill: rgba(70,70,82,.32); --frost-rim: rgba(255,255,255,.16); --liquid-fill: rgba(80,80,95,.14); --liquid-spec: rgba(255,255,255,.5); } }
+:root[data-theme="dark"] { --frost-fill: rgba(70,70,82,.32); --frost-rim: rgba(255,255,255,.16); --liquid-fill: rgba(80,80,95,.14); --liquid-spec: rgba(255,255,255,.5); }
+
+.timiya .bubble, .voice, .chip {
+  background: var(--frost-fill);
+  border: 1px solid var(--frost-rim);
+  box-shadow: 0 10px 28px -14px rgba(30,30,50,.35), inset 0 1px 0 var(--frost-rim);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45); backdrop-filter: blur(22px) saturate(1.45);
+}
+.chip-strong { border-color: var(--hair-strong); }
+
+/* 液态玻璃：模糊很轻，主要靠边缘高光和底部回光，像一滴有厚度的玻璃 */
+html[data-glass="liquid"] .timiya .bubble,
+html[data-glass="liquid"] .voice,
+html[data-glass="liquid"] .chip {
+  position: relative; isolation: isolate;
+  background: var(--liquid-fill);
+  border: 0;
+  -webkit-backdrop-filter: blur(5px) saturate(1.9) brightness(1.06); backdrop-filter: blur(5px) saturate(1.9) brightness(1.06);
+  box-shadow:
+    0 12px 30px -14px rgba(30,30,50,.4),
+    0 2px 6px -2px rgba(30,30,50,.18),
+    inset 0 0 0 1px rgba(255,255,255,.38),
+    inset 1.5px 2px 1px -1px var(--liquid-spec),
+    inset -1.5px -2px 1px -1px rgba(255,255,255,.55),
+    inset 0 -14px 22px -16px rgba(255,255,255,.85),
+    inset 0 10px 18px -14px rgba(255,255,255,.7);
+}
+html[data-glass="liquid"] .timiya .bubble::before,
+html[data-glass="liquid"] .voice::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
+  background: linear-gradient(150deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 32%, rgba(255,255,255,0) 68%, rgba(255,255,255,.28) 100%);
+  mix-blend-mode: soft-light;
+}
+html[data-glass="liquid"] .timiya .bubble::after {
+  content: ""; position: absolute; left: 14%; right: 14%; top: 1px; height: 38%; border-radius: 999px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0)); filter: blur(1px); opacity: .7; z-index: -1;
+}
+
+/* ── 中文字体（可选）：霞鹜文楷 细 / 站酷小薇 / 思源宋体 细；没加载到就退回苹方 ── */
+html[data-zh="wenkai"] { --font: "LXGW WenKai", -apple-system, "PingFang SC", sans-serif; }
+html[data-zh="xiaowei"] { --font: "ZCOOL XiaoWei", -apple-system, "PingFang SC", sans-serif; }
+html[data-zh="notoserif"] { --font: "Noto Serif SC", "Songti SC", -apple-system, serif; }
+html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoserif"] body { font-weight: 300; letter-spacing: .04em; }
