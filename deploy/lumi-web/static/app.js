@@ -503,17 +503,28 @@ async function refreshVitals() {
 }
 
 // ── 背景：自己挑一张照片，压小了存在这台手机上 ──
+const BG_PRESETS = { boiserie: "/bg/boiserie.svg", fenetre: "/bg/fenetre.svg", marble: "" };
+const bgSheet = document.getElementById("bg-sheet");
 function applyBg() {
-  let url = null;
-  try { url = localStorage.getItem("lumi.bg"); } catch {}
+  let photo = null, preset = "boiserie";
+  try { photo = localStorage.getItem("lumi.bg"); preset = localStorage.getItem("lumi.bgPreset") || "boiserie"; } catch {}
+  const choice = photo ? "photo" : (preset in BG_PRESETS ? preset : "boiserie");
+  const url = photo || BG_PRESETS[choice];
   els.bgImg.style.backgroundImage = url ? `url("${url}")` : "";
   els.bg.classList.toggle("custom", !!url);
+  for (const b of bgSheet.querySelectorAll(".bg-opt")) b.setAttribute("aria-pressed", String(b.dataset.bg === choice));
+  const thumb = bgSheet.querySelector(".bg-photo");
+  thumb.style.backgroundImage = photo ? `url("${photo}")` : "";
+  thumb.classList.toggle("has", !!photo);
 }
-els.bgBtn.addEventListener("click", () => els.bgFile.click());
-document.getElementById("bg-reset").addEventListener("click", () => {
-  try { localStorage.removeItem("lumi.bg"); } catch {}
+els.bgBtn.addEventListener("click", (e) => { e.stopPropagation(); bgSheet.hidden = !bgSheet.hidden; });
+document.addEventListener("click", (e) => { if (!bgSheet.hidden && !bgSheet.contains(e.target)) bgSheet.hidden = true; });
+bgSheet.addEventListener("click", (e) => {
+  const b = e.target.closest(".bg-opt");
+  if (!b) return;
+  if (b.dataset.bg === "photo") return els.bgFile.click();
+  try { localStorage.removeItem("lumi.bg"); localStorage.setItem("lumi.bgPreset", b.dataset.bg); } catch {}
   applyBg();
-  toast("换回默认的大理石了");
 });
 els.bgFile.addEventListener("change", async () => {
   const f = els.bgFile.files[0];
@@ -536,6 +547,7 @@ els.bgFile.addEventListener("change", async () => {
     ctx.putImageData(px, 0, 0);
     localStorage.setItem("lumi.bg", c.toDataURL("image/jpeg", 0.84));
     applyBg();
+    bgSheet.hidden = true;
   } catch { toast("这张图存不下，换一张小一点的试试"); }
 });
 els.moon.addEventListener("click", () => newConv().catch((e) => toast(e.message)));
