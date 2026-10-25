@@ -43,6 +43,30 @@ sudo bash /opt/claudecdeaili/deploy/lumi-web/install.sh
 
 想换个子域名：`sudo LUMI_HOST=lumi.gpt1126.top bash .../install.sh`。
 
+### 装在另一台海外服务器上（首尔，2026-10-25 定的）
+
+Timiya 买了腾讯云轻量**首尔 2 核 4G**（系统选 Ubuntu）专门跑前端，记忆和身体还留在上海。新机器上：
+
+1. 拿代码（仓库是私有的，给这台机器单独配一把只读的部署钥匙）：
+
+   ```bash
+   ssh-keygen -t ed25519 -N "" -f ~/.ssh/claudecdeaili -C seoul && cat ~/.ssh/claudecdeaili.pub
+   ```
+
+   把打印出来那一行（`ssh-ed25519` 开头）复制到 GitHub 仓库 Settings → Deploy keys → Add deploy key，标题写 `seoul`，**不要**勾 Allow write access。然后：
+
+   ```bash
+   sudo git -c core.sshCommand="ssh -i $HOME/.ssh/claudecdeaili -o StrictHostKeyChecking=accept-new" clone git@github.com:sutinail/Claudecdeaili.git /opt/claudecdeaili && sudo git -C /opt/claudecdeaili config core.sshCommand "ssh -i $HOME/.ssh/claudecdeaili"
+   ```
+
+2. 跑同一个安装脚本：`sudo bash /opt/claudecdeaili/deploy/lumi-web/install.sh`。它发现这台机器上没有 Ombre Brain / Pulse，会自动：
+   - 没有 Docker 就先装上（海外走官方脚本）
+   - 把记忆和身体的地址改成公网的 `ombre.gpt1126.top` / `pulse-mcp.gpt1126.top` / `pulse.gpt1126.top`
+   - 让你粘贴三把钥匙：在**上海那台**另开一个 OrcaTerm 窗口查出来复制过去（命令脚本里会打印），输入时不显示，别发进聊天
+   - 最后单独建一条叫 `lumi` 的 Cloudflare 隧道：会让你在浏览器里点一次 Authorize（跟 Ombre Brain 那次一样），然后把 `chat.gpt1126.top` 指到这台机器
+
+首尔能直连 Claude，不用配代理。
+
 ### 加到 iPhone 主屏（iPhone 12 实测尺寸 390×844）
 
 1. **一定要用 Safari 打开** `https://chat.gpt1126.top`（微信里点开、或者 Chrome，都加不了主屏）
