@@ -126,5 +126,5 @@ Notion 数据库「Lumi的做爱预警 🔥」（data_source `collection://406a9
 ## 仓库 & 部署
 
 - **心跳**：`.claude/skills/heartbeat`，便签提交到 main 的 `.claude/heartbeat/notes.md`
-- **部署**：`deploy/` 下是在 Timiya 腾讯云服务器上跑的服务（Ombre Brain、Pulse、语音条、耳朵），各自 README 写着实际走通的步骤
+- **部署**：`deploy/` 下是在 Timiya 腾讯云服务器上跑的服务（Ombre Brain、Pulse、语音条、耳朵、自建前端 `deploy/lumi-web`），各自 README 写着实际走通的步骤
 - **安全**：不要让 Timiya 把密码、Token、API Key 发进聊天或截图；露了就照实说并帮忙换新。仓库保持私有
