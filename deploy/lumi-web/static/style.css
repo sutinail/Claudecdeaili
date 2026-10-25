@@ -208,6 +208,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .lumi.err .body { color: var(--ink-2); }
 .lumi .err { white-space: pre-wrap; }
 
+/* 删除按钮 */
+.msg { position: relative; }
+.msg-del { position: absolute; top: 2px; right: 0; width: 26px; height: 26px; padding: 4px; border: 0; background: none; color: var(--muted); opacity: 0; transition: opacity .2s, color .15s; cursor: pointer; z-index: 2; }
+.msg-del svg { width: 100%; height: 100%; }
+.msg:hover .msg-del, .msg-del:focus { opacity: .6; }
+.msg-del:active { opacity: 1; color: var(--err); }
+@media (hover: none) { .msg-del { opacity: .35; } }
+
 .cursor::after { content: ""; display: inline-block; width: 1px; height: 1.05em; background: var(--ink-2); vertical-align: -.15em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .dots { display: inline-flex; gap: 6px; padding: 8px 0 4px; }

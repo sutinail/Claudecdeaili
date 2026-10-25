@@ -268,16 +268,44 @@ const fmtTime = (iso) => {
 };
 const isMemoryTool = (name) => /^mcp__ombre__/.test(name);
 
+const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 5h12M8 5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1m2 0v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5h10z"/><path d="M9 8v6m2-6v6"/></svg>`;
+
+function addDelBtn(row, msgId) {
+  if (!msgId) return;
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "msg-del"; btn.title = "删除";
+  btn.innerHTML = TRASH_SVG;
+  btn.addEventListener("click", () => deleteMsg(msgId, row));
+  row.appendChild(btn);
+}
+
+async function deleteMsg(msgId, row) {
+  if (state.busy) return;
+  if (!confirm("删掉这条消息？")) return;
+  const cid = state.conv?.id;
+  if (!cid) return;
+  const r = await fetch(`/api/conversations/${cid}/messages/${msgId}`, { method: "DELETE", credentials: "same-origin" });
+  if (r.ok) {
+    row.style.transition = "opacity .25s"; row.style.opacity = "0";
+    setTimeout(() => row.remove(), 260);
+    const idx = state.conv.messages.findIndex((m) => m.id === msgId);
+    if (idx >= 0) state.conv.messages.splice(idx, 1);
+  } else {
+    const j = await r.json().catch(() => ({}));
+    alert(j.error || "删除失败");
+  }
+}
+
 function msgEl(msg, streaming = false) {
   const row = document.createElement("div");
   row.className = `msg ${msg.role}`;
+  row.dataset.id = msg.id || "";
   if (msg.ts) {
     const st = document.createElement("div");
     st.className = "stamp"; st.textContent = fmtTime(msg.ts) + (msg.stopped ? " · interrompu" : "");
     row.appendChild(st);
   }
   if (msg.role === "timiya") {
-    row.dataset.id = msg.id || "";
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     if (msg.kind === "voice") {
@@ -287,6 +315,7 @@ function msgEl(msg, streaming = false) {
       bubble.textContent = msg.text;
     }
     row.appendChild(bubble);
+    if (!streaming) addDelBtn(row, msg.id);
     return row;
   }
   const star = document.createElement("span");
@@ -296,6 +325,7 @@ function msgEl(msg, streaming = false) {
   inner.className = "inner";
   row.appendChild(inner);
   fillLumi(row, msg, streaming);
+  if (!streaming) addDelBtn(row, msg.id);
   return row;
 }
 
@@ -449,6 +479,7 @@ function callRowEl(m, all) {
     box.hidden = !box.hidden;
   });
   row.append(st, btn, box);
+  addDelBtn(row, m.id);
   return row;
 }
 

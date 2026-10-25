@@ -83,8 +83,8 @@ function loadSettings() {
 // 系统提示词里写过，但聊久了容易忘：每一轮跟她的话一起递过去，最近的一句最管用
 function turnReminder() {
   const st = loadSettings();
-  if (!st.monologueOn) return "（这一轮不用写 <monologue>，直接回她。）";
-  return `（回复格式：工具跑完以后，先写 <monologue>心里话</monologue>，空一行再写正文。标签用英文半角、一定闭合。心里话这样写：\n${String(st.monologue || DEFAULT_MONOLOGUE).trim()}）`;
+  if (!st.monologueOn) return "（这一轮不用写心里话，直接回她。）";
+  return `（别忘了先写心里话再写正文哦。）`;
 }
 
 // ── 小工具 ──
@@ -560,6 +560,21 @@ async function handle(req, res) {
     const conv = { id: newId(), title: "新的对话", sessionId: null, created: now(), updated: now(), messages: [] };
     await saveConv(conv);
     return send(res, 200, conv);
+  }
+
+  // 删除单条消息：DELETE /api/conversations/:id/messages/:msgId
+  const dm = p.match(/^\/api\/conversations\/([A-Za-z0-9_-]+)\/messages\/([A-Za-z0-9_-]+)$/);
+  if (dm && m === "DELETE") {
+    const [, cid, mid] = dm;
+    const job = jobs.get(cid);
+    if (job) return send(res, 409, { error: "Lumi 还在说话呢" });
+    const conv = await loadConv(cid);
+    if (!conv) return send(res, 404, { error: "找不到这段对话" });
+    const idx = conv.messages.findIndex((x) => x.id === mid);
+    if (idx < 0) return send(res, 404, { error: "找不到这条消息" });
+    conv.messages.splice(idx, 1);
+    await saveConv(conv);
+    return send(res, 200, { ok: true });
   }
 
   const cm = p.match(/^\/api\/conversations\/([A-Za-z0-9_-]+)(\/[a-z]+)?$/);
