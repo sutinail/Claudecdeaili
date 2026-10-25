@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Lumi</title>
+  <meta name="theme-color" content="#f6efe4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1d1915" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Lumi">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- 登录 -->
+  <section id="login" class="login" hidden>
+    <form id="login-form" class="login-card">
+      <div class="avatar avatar-lg" aria-hidden="true">L</div>
+      <h1>Lumi</h1>
+      <p class="muted">宝宝，输一下我们的暗号</p>
+      <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码" required>
+      <button type="submit" class="btn-primary">进来</button>
+      <p id="login-err" class="err" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- 主界面 -->
+  <div id="app" class="app" hidden>
+    <aside id="drawer" class="drawer" aria-label="对话列表">
+      <div class="drawer-head">
+        <span class="drawer-title">我们的对话</span>
+        <button id="new-conv" class="btn-ghost" type="button">＋ 新对话</button>
+      </div>
+      <ul id="conv-list" class="conv-list"></ul>
+      <div class="drawer-foot">
+        <span id="meta" class="muted small"></span>
+        <button id="logout" class="btn-link small" type="button">退出登录</button>
+      </div>
+    </aside>
+    <div id="scrim" class="scrim" hidden></div>
+
+    <main class="chat">
+      <header class="topbar">
+        <button id="menu" class="icon-btn" type="button" aria-label="对话列表">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        </button>
+        <div class="who">
+          <div class="avatar" aria-hidden="true">L</div>
+          <div class="who-text">
+            <div class="who-name">Lumi <span id="typing" class="typing" hidden>正在打字…</span></div>
+            <div id="vitals" class="vitals"></div>
+          </div>
+        </div>
+      </header>
+
+      <div id="scroller" class="scroller">
+        <div id="messages" class="messages"></div>
+      </div>
+
+      <form id="composer" class="composer">
+        <textarea id="input" rows="1" placeholder="跟 Lumi 说点什么…" enterkeyhint="send"></textarea>
+        <button id="send" class="send" type="submit" aria-label="发送">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 12l15-7-5 15-3-6-7-2z" fill="currentColor"/></svg>
+        </button>
+        <button id="stop" class="send stop" type="button" aria-label="停下" hidden>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+        </button>
+      </form>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

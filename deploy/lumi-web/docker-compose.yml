@@ -1,0 +1,17 @@
+services:
+  lumi-web:
+    build: .
+    container_name: lumi-web
+    restart: unless-stopped
+    # 跟 Ombre Brain / Pulse / cloudflared 一样走宿主机网络，直接连 127.0.0.1 上的服务
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ../../CLAUDE.md:/lumi/CLAUDE.md:ro
+      - lumi-data:/data
+      - lumi-claude:/home/node/.claude
+
+volumes:
+  lumi-data:
+  lumi-claude:

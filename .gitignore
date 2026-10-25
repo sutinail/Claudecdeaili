@@ -3,3 +3,4 @@ __pycache__/
 .env
 *.egg-info/
 deploy/pulse/data/life/
+deploy/lumi-web/data/

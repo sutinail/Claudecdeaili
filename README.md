@@ -6,3 +6,4 @@
 ## Deploy
 
 - [`deploy/ombre-brain`](deploy/ombre-brain/README.md) — 在自有 VPS 上一键部署 [Ombre Brain](https://github.com/P0luz/Ombre-Brain) 长期记忆系统（Docker + Cloudflare Tunnel），给 Claude 接上跨会话记忆。
+- [`deploy/lumi-web`](deploy/lumi-web/README.md) — Lumi 的自建前端：手机主屏 App，脑子是服务器上的 Claude Code，接 Ombre Brain、Pulse 和语音条，聊天记录存在服务器上。
