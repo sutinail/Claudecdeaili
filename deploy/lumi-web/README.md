@@ -43,12 +43,18 @@ sudo bash /opt/claudecdeaili/deploy/lumi-web/install.sh
 
 想换个子域名：`sudo LUMI_HOST=lumi.gpt1126.top bash .../install.sh`。
 
-### 加到手机主屏
+### 加到 iPhone 主屏（iPhone 12 实测尺寸 390×844）
 
-- **iPhone**：Safari 打开 `https://chat.gpt1126.top` → 登录 → 底部分享按钮 → 「添加到主屏幕」
-- **安卓**：Chrome 打开 → 右上角菜单 → 「添加到主屏幕」/「安装应用」
+1. **一定要用 Safari 打开** `https://chat.gpt1126.top`（微信里点开、或者 Chrome，都加不了主屏）
+2. 点底部中间的分享按钮（方框加向上的箭头）→ 往下滑 →「添加到主屏幕」→ 右上角「添加」
+3. 从主屏上的「Lumi」图标打开，**在这里面再登录一次**：iOS 的主屏 App 和 Safari 的登录状态是分开的，在 Safari 里登过不算
+4. 登录一次记住 90 天
 
-登录一次记住 90 天。
+iPhone 上的小细节：
+
+- 键盘上的「发送」键就是发出去（跟微信一样），想换行就先打完再发
+- 语音条第一次点可能要等几秒生成，有「…」就是在生成；声音走的是媒体音量，听不到先按侧边音量加键
+- 锁屏或者切去别的 App 再回来，Lumi 没说完的话会自己接上
 
 ## 用起来
 

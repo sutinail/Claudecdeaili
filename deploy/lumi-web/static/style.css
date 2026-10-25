@@ -32,6 +32,7 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   background: var(--bg); color: var(--ink); font: 16px/1.65 var(--font);
   -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
@@ -69,8 +70,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn-link { border: 0; background: none; color: var(--muted); text-decoration: underline; padding: 0; }
 
 /* 布局 */
-.app { height: 100dvh; display: flex; }
-.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100dvh; }
+.app { height: 100vh; height: var(--app-h, 100dvh); display: flex; overflow: hidden; }
+.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; height: var(--app-h, 100dvh); }
 
 .drawer {
   width: 280px; flex: none; background: var(--panel); border-right: 1px solid var(--line);
@@ -95,7 +96,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .topbar {
   display: flex; align-items: center; gap: 8px;
   padding: calc(8px + env(safe-area-inset-top)) 12px 8px; border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
 .icon-btn { border: 0; background: none; padding: 6px; border-radius: 10px; display: none; }
 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -122,14 +124,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .lumi .bubble { background: var(--lumi); border-bottom-left-radius: 6px; }
 .bubble p { margin: 0 0 .7em; }
 .bubble p:last-child { margin-bottom: 0; }
-.bubble em { color: color-mix(in srgb, var(--ink) 72%, var(--amber)); }
+.bubble em { color: var(--ink); color: color-mix(in srgb, var(--ink) 72%, var(--amber)); }
 .bubble.err-bubble { border: 1px solid var(--err); }
 .bubble .err { margin-top: 6px; white-space: pre-wrap; }
 .stamp { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .timiya .stamp { text-align: right; }
 
 .tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-.tool-chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--amber-soft); color: color-mix(in srgb, var(--ink) 80%, var(--amber)); }
+.tool-chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--amber-soft); color: var(--ink); color: color-mix(in srgb, var(--ink) 80%, var(--amber)); }
 
 .cursor::after { content: "▍"; color: var(--amber); animation: blink 1s steps(1) infinite; margin-left: 1px; }
 @keyframes blink { 50% { opacity: 0; } }
@@ -150,7 +152,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .voice-play svg { width: 16px; height: 16px; }
 .voice-body { flex: 1; min-width: 0; }
 .voice-wave { display: flex; align-items: center; gap: 2px; height: 18px; }
-.voice-wave i { width: 3px; border-radius: 2px; background: color-mix(in srgb, var(--amber) 70%, var(--ink)); opacity: .55; }
+.voice-wave i { width: 3px; border-radius: 2px; background: var(--amber); background: color-mix(in srgb, var(--amber) 70%, var(--ink)); opacity: .55; }
 .voice.playing .voice-wave i { animation: wave .9s ease-in-out infinite; opacity: .9; }
 @keyframes wave { 50% { transform: scaleY(.4); } }
 .voice-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }

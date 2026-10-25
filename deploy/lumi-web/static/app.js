@@ -117,7 +117,23 @@ function voiceHtml(script) {
 
 // ── 语音条播放 ──
 const ttsCache = new Map();
-let audio = null, audioCard = null;
+// iOS 只允许在点击的那一下开始放声音：全局只用一个 <audio>，点击时先用一段静音解锁，等语音生成好再换 src
+const audio = new Audio();
+audio.preload = "auto";
+audio.setAttribute("playsinline", "");
+const SILENT = (() => {
+  // 0.05 秒静音 WAV，现场拼出来
+  const n = 400, b = new DataView(new ArrayBuffer(44 + n * 2));
+  const w = (o, t) => [...t].forEach((c, i) => b.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); b.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); b.setUint32(16, 16, true);
+  b.setUint16(20, 1, true); b.setUint16(22, 1, true); b.setUint32(24, 8000, true); b.setUint32(28, 16000, true);
+  b.setUint16(32, 2, true); b.setUint16(34, 16, true); w(36, "data"); b.setUint32(40, n * 2, true);
+  return "data:audio/wav;base64," + btoa(String.fromCharCode(...new Uint8Array(b.buffer)));
+})();
+let audioCard = null;
+audio.onended = () => setCard(audioCard, false);
+audio.onpause = () => { if (audio.src !== SILENT) setCard(audioCard, false); };
+audio.onplay = () => { if (audio.src !== SILENT) setCard(audioCard, true); };
 
 function setCard(card, playing, label) {
   if (!card) return;
@@ -128,21 +144,25 @@ function setCard(card, playing, label) {
 
 async function playVoice(card) {
   const script = card.dataset.script;
-  if (audioCard === card && audio) {
-    if (audio.paused) { audio.play(); setCard(card, true); } else { audio.pause(); setCard(card, false); }
+  const url0 = ttsCache.get(script);
+  if (audioCard === card && url0 && audio.src.endsWith(url0)) {
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
     return;
   }
-  if (audio) { audio.pause(); setCard(audioCard, false); }
+  if (audioCard) { const prev = audioCard; audioCard = null; audio.pause(); setCard(prev, false); }
   audioCard = card;
   setCard(card, false, "…");
   try {
-    let url = ttsCache.get(script);
-    if (!url) { url = (await api("/api/tts", { method: "POST", body: { text: script } })).url; ttsCache.set(script, url); }
+    let url = url0;
+    if (!url) {
+      // 还在点击里：先放一段静音把 iOS 的声音解锁
+      audio.src = SILENT;
+      audio.play().catch(() => {});
+      url = (await api("/api/tts", { method: "POST", body: { text: script } })).url;
+      ttsCache.set(script, url);
+    }
     if (audioCard !== card) return;
-    audio = new Audio(url);
-    audio.onended = () => setCard(card, false);
-    audio.onpause = () => setCard(card, false);
-    audio.onplay = () => setCard(card, true);
+    audio.src = url;
     await audio.play();
   } catch (e) {
     setCard(card, false);
@@ -422,10 +442,25 @@ async function sendMessage() {
 }
 
 els.composer.addEventListener("submit", (e) => { e.preventDefault(); sendMessage(); });
-const coarse = matchMedia("(pointer: coarse)").matches;
+// 跟微信一样：键盘上的「发送」就是发出去；电脑上 Shift+Enter 换行
 els.input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !coarse) { e.preventDefault(); sendMessage(); }
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendMessage(); }
 });
+
+// iPhone 弹出键盘时页面不会自己变矮：按可见区域的高度撑住整个界面，输入框就贴在键盘上面
+function fitViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const stick = nearBottom();
+  document.documentElement.style.setProperty("--app-h", `${Math.round(vv.height)}px`);
+  if (window.scrollY) window.scrollTo(0, 0);
+  if (stick) toBottom();
+}
+if (window.visualViewport) {
+  visualViewport.addEventListener("resize", fitViewport);
+  visualViewport.addEventListener("scroll", fitViewport);
+  fitViewport();
+}
 function autosize() {
   els.input.style.height = "auto";
   els.input.style.height = Math.min(els.input.scrollHeight, innerHeight * 0.4) + "px";
