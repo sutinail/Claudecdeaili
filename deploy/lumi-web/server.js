@@ -36,9 +36,11 @@ const PULSE_SECRET = env("PULSE_SECRET");
 
 const XI_KEY = env("ELEVENLABS_API_KEY");
 const XI_VOICE = env("ELEVENLABS_VOICE_ID", "48uZMMvYcyyJiRxqFbxG");
-const XI_MODEL = env("ELEVENLABS_MODEL", "eleven_v3");
-const XI_STABILITY = Number(env("ELEVENLABS_STABILITY", "0.5"));
-const XI_SIMILARITY = Number(env("ELEVENLABS_SIMILARITY", "0.78"));
+// 跟上海 /opt/voice-card 那套一样（eleven_v4，Timiya 调过、听惯了的声音）
+const XI_MODEL = env("ELEVENLABS_MODEL", "eleven_v4");
+const XI_STABILITY = Number(env("ELEVENLABS_STABILITY", "0.4"));
+const XI_SIMILARITY = Number(env("ELEVENLABS_SIMILARITY", "0.75"));
+const XI_STYLE = Number(env("ELEVENLABS_STYLE", "0.4"));
 
 // 耳朵：录音交给它转写、画语调图；Lumi 用它的 listen 工具去「听」
 const EARS_URL = env("EARS_URL", "https://ears.gpt1126.top").replace(/\/+$/, "");
@@ -353,13 +355,13 @@ async function vitals() {
 
 async function tts(text) {
   if (!XI_KEY) throw Object.assign(new Error("还没填 ELEVENLABS_API_KEY"), { status: 503 });
-  const hash = crypto.createHash("sha256").update(`${XI_MODEL}|${XI_VOICE}|${XI_STABILITY}|${XI_SIMILARITY}|${text}`).digest("hex").slice(0, 32);
+  const hash = crypto.createHash("sha256").update(`${XI_MODEL}|${XI_VOICE}|${XI_STABILITY}|${XI_SIMILARITY}|${XI_STYLE}|${text}`).digest("hex").slice(0, 32);
   const file = path.join(TTS_DIR, `${hash}.mp3`);
   if (!fs.existsSync(file)) {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${XI_VOICE}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": XI_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
-      body: JSON.stringify({ text, model_id: XI_MODEL, voice_settings: { stability: XI_STABILITY, similarity_boost: XI_SIMILARITY } }),
+      body: JSON.stringify({ text, model_id: XI_MODEL, voice_settings: { stability: XI_STABILITY, similarity_boost: XI_SIMILARITY, style: XI_STYLE, use_speaker_boost: true, speed: 1.0 } }),
       signal: AbortSignal.timeout(90_000),
     });
     if (!r.ok) {

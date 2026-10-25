@@ -96,6 +96,11 @@ if [[ -z "$(getv ELEVENLABS_API_KEY .env)" ]]; then
   XI="$(echo -n "$XI" | tr -d '[:space:]')"
   [[ -n "$XI" ]] && setv ELEVENLABS_API_KEY "$XI" && ok "语音条 Key 存好了" || true
 fi
+# 早先的 .env 是照 eleven_v3 抄的；换成跟 voice-card 一样的 eleven_v4（自己改过的值不动）
+if [[ "$(getv ELEVENLABS_MODEL .env)" == "eleven_v3" ]]; then
+  setv ELEVENLABS_MODEL eleven_v4; ok "语音条模型换成 eleven_v4，跟上海的语音条一样"
+  [[ "$(getv ELEVENLABS_STABILITY .env)" == "0.5" ]] && setv ELEVENLABS_STABILITY 0.4
+fi
 
 # ── 5. 试一下能不能连上 Claude ──
 if [[ -n "$(getv CLAUDE_CODE_OAUTH_TOKEN .env)" ]]; then
