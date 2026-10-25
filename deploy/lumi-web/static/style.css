@@ -421,3 +421,38 @@ html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoser
 .voice-bubble .voice::before { content: none; }
 .clip-text { margin-top: 6px; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); white-space: pre-wrap; }
 .listening { color: var(--muted); font-size: 13px; letter-spacing: .08em; animation: pulse 1.6s ease-in-out infinite; }
+
+/* ── 发送键：一支淡白的羽毛笔，不再是一颗厚重的银球 ── */
+.seal.quill, .seal#stop {
+  width: 46px; height: 46px; color: var(--ink-2); border: 1px solid var(--frost-rim);
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75), rgba(255,255,255,.18) 70%);
+  box-shadow: 0 8px 20px -12px rgba(30,30,50,.35), inset 0 1px 0 rgba(255,255,255,.8);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+}
+.seal.quill svg { width: 26px; height: 26px; filter: none; opacity: .82; transform: translate(1px, -1px); transition: transform .35s cubic-bezier(.3,.7,.2,1), opacity .2s; }
+.seal.quill:active svg { transform: translate(4px, -4px) rotate(-6deg); }
+.composer:focus-within .seal.quill svg { opacity: 1; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .seal.quill, :root:not([data-theme="light"]) .seal#stop {
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.14), rgba(255,255,255,.03) 70%); color: #d8d8e0;
+  }
+}
+
+/* ── 录音面板：跟换背景那块一样的玻璃 ── */
+.voice-sheet { grid-template-columns: 1fr; justify-items: center; gap: 8px; padding: 14px 18px 12px; }
+.vs-head { width: 100%; display: flex; align-items: baseline; justify-content: space-between; }
+.vs-title { font-family: var(--script); font-size: 26px; color: var(--ink-2); line-height: 1; }
+.vs-time { font-family: var(--serif); font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.vs-wave { width: 100%; height: 44px; }
+.vs-rec {
+  width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin: 2px 0;
+  border: 1px solid var(--frost-rim); background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.8), rgba(255,255,255,.2) 72%);
+  box-shadow: 0 10px 24px -14px rgba(30,30,50,.45), inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 6px rgba(255,255,255,.18);
+}
+.vs-rec i { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); opacity: .75; transition: border-radius .25s, transform .25s; }
+.voice-sheet.rolling .vs-rec { animation: breathe 1.8s ease-in-out infinite; }
+.voice-sheet.rolling .vs-rec i { border-radius: 4px; transform: scale(.85); }
+@keyframes breathe { 50% { box-shadow: 0 10px 24px -14px rgba(30,30,50,.45), inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 12px rgba(255,255,255,.1); } }
+.vs-foot { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.vs-hint { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+.vs-rec:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 3px; }
