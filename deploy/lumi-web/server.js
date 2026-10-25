@@ -448,7 +448,8 @@ async function serveStatic(req, res, pathname) {
   try { if (!(await fsp.stat(file)).isFile()) throw 0; }
   catch { file = path.join(STATIC_DIR, "index.html"); }
   const ext = path.extname(file);
-  const fresh = ext === ".html" || rel === "sw.js" || ext === ".webmanifest";
+  // 样式和脚本也每次跟服务器对一下，不然 Safari 会拿新页面配旧样式（新羽毛底下垫着旧银球）
+  const fresh = [".html", ".css", ".js", ".webmanifest"].includes(ext);
   res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": fresh ? "no-cache" : "public, max-age=3600" });
   fs.createReadStream(file).pipe(res);
 }

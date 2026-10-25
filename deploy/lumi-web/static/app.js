@@ -796,7 +796,7 @@ async function refreshVitals() {
     const { line } = await api("/api/vitals");
     if (!line) { els.chipBeat.hidden = true; return; }
     const body = line.replace(/^\[|\]$/g, "");
-    const bpm = Number((body.match(/(\d+)\s*bpm/) || [])[1]) || 72;
+    const bpm = Math.round(Number((body.match(/(\d+(?:\.\d+)?)\s*bpm/) || [])[1])) || 72; // Pulse 给的是 76.6 这种小数
     const beat = `--beat:${(60 / bpm).toFixed(2)}s`;
     els.vitals.innerHTML = `<span class="beat" style="${beat}">♥</span> ${esc(body.split("·").slice(1).join(" · "))}`;
     els.chipBeat.innerHTML = `<span class="beat">♥</span> ${bpm} bpm`;
