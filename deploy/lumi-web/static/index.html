@@ -21,7 +21,7 @@
   <link rel="apple-touch-startup-image" href="/splash/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="stylesheet" href="/style.css?v=19">
+  <link rel="stylesheet" href="/style.css?v=20">
 </head>
 <body>
   <!-- 花纹：开屏和主页的徽章都用（开屏结束会被删掉，所以放在外面） -->
@@ -92,6 +92,7 @@
       <ul id="conv-list" class="conv-list"></ul>
       <div class="drawer-foot">
         <span id="meta" class="muted small"></span>
+        <button id="drawer-settings" class="btn-link small" type="button">设置</button>
         <button id="logout" class="btn-link small" type="button">退出登录</button>
       </div>
     </aside>
@@ -102,6 +103,7 @@
     <!-- 主页：打开先看到这里 -->
     <section id="view-home" class="view home" aria-label="主页">
       <div class="home-scroll">
+        <button id="home-settings" class="icon-btn home-gear" type="button" aria-label="设置"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
         <header class="home-head">
           <div id="home-date" class="home-date"></div>
           <div id="home-hello" class="home-hello script">bonsoir, Timiya</div>
@@ -234,6 +236,21 @@
     </section>
     </div>
 
+    <!-- 设置 -->
+    <div id="settings" class="settings" role="dialog" aria-label="设置" hidden>
+      <form id="settings-form" class="settings-card">
+        <div class="settings-head"><span class="script">réglages</span><button id="settings-close" class="btn-link small" type="button">关闭</button></div>
+        <section class="settings-sec">
+          <div class="settings-k">thinking · monologue <span>心里话</span></div>
+          <label class="settings-switch"><input id="set-mono-on" type="checkbox"><i></i><span>每条回复都先写一段心里话</span></label>
+          <p class="settings-note">下面这段会跟你的每一条消息一起递给他，他每次回你之前都会照着写。想让心里话变成什么样，就改这里。</p>
+          <textarea id="set-mono" rows="7" spellcheck="false"></textarea>
+          <div class="settings-row"><button id="set-mono-reset" class="btn-link small" type="button">恢复默认</button><span id="settings-saved" class="settings-saved"></span></div>
+        </section>
+        <button class="btn-primary" type="submit">保存</button>
+      </form>
+    </div>
+
     <!-- 底下的导航：先放主页、聊天、通话，后面的位置留着 -->
     <nav id="tabbar" class="tabbar" aria-label="切换">
       <button class="tab" type="button" data-tab="home" aria-label="主页">
@@ -255,6 +272,6 @@
     </nav>
   </div>
 
-  <script src="/app.js?v=19"></script>
+  <script src="/app.js?v=20"></script>
 </body>
 </html>

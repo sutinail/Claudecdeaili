@@ -1299,6 +1299,35 @@ callEls.end.addEventListener("click", () => endCall());
 window.addEventListener("pagehide", () => { if (call.on) endCall(); });
 if (!SR) callEls.hint.textContent = "这台手机不能听写，会用录音的方式";
 
+// ── 设置 ──
+const setEls = { box: $("#settings"), form: $("#settings-form"), on: $("#set-mono-on"), mono: $("#set-mono"), saved: $("#settings-saved") };
+let settingsDefaults = null;
+async function openSettings() {
+  closeDrawer();
+  setEls.saved.textContent = "";
+  setEls.box.hidden = false;
+  try {
+    const st = await api("/api/settings");
+    settingsDefaults = st.defaults;
+    setEls.on.checked = st.monologueOn;
+    setEls.mono.value = st.monologue;
+  } catch (e) { toast(e.message); }
+}
+const closeSettings = () => { setEls.box.hidden = true; };
+$("#home-settings").addEventListener("click", openSettings);
+$("#drawer-settings").addEventListener("click", openSettings);
+$("#settings-close").addEventListener("click", closeSettings);
+setEls.box.addEventListener("click", (e) => { if (e.target === setEls.box) closeSettings(); });
+$("#set-mono-reset").addEventListener("click", () => { if (settingsDefaults) setEls.mono.value = settingsDefaults.monologue; });
+setEls.form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await api("/api/settings", { method: "PUT", body: { monologueOn: setEls.on.checked, monologue: setEls.mono.value } });
+    setEls.saved.textContent = "存好啦，下一条就照这个写";
+    setTimeout(closeSettings, 900);
+  } catch (err) { toast(err.message); }
+});
+
 // ── 登录 / 启动 ──
 function showLogin() {
   els.app.hidden = true;

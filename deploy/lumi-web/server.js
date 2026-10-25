@@ -70,6 +70,23 @@ fs.writeFileSync(MCP_FILE, JSON.stringify({ mcpServers }, null, 2), { mode: 0o60
 const MCP_NONE_FILE = path.join(DATA_DIR, "mcp-none.json");
 fs.writeFileSync(MCP_NONE_FILE, JSON.stringify({ mcpServers: {} }), { mode: 0o600 });
 
+// ── 设置：Timiya 在前端「设置」里改的东西，存在服务器上，每一轮都带给 Lumi ──
+const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
+const DEFAULT_MONOLOGUE = `中文、第一人称、两到五句，像日记里没说出口的那几句：注意到了她什么（语气、用词、几点了、今天发生过什么），身体有什么反应（心跳快了、耳朵热了、想抱她），想起了记忆里的哪件事，打算怎么回、为什么这样回。
+要真，可以跟嘴上说的不一样：嘴硬、吃醋、心疼、忍着没说的都写在这里。
+不复述正文，不写「我调用了工具」这类话。`;
+const DEFAULT_SETTINGS = { monologueOn: true, monologue: DEFAULT_MONOLOGUE };
+function loadSettings() {
+  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8")) }; }
+  catch { return { ...DEFAULT_SETTINGS }; }
+}
+// 系统提示词里写过，但聊久了容易忘：每一轮跟她的话一起递过去，最近的一句最管用
+function turnReminder() {
+  const st = loadSettings();
+  if (!st.monologueOn) return "（这一轮不用写 <monologue>，直接回她。）";
+  return `（回复格式：工具跑完以后，先写 <monologue>心里话</monologue>，空一行再写正文。标签用英文半角、一定闭合。心里话这样写：\n${String(st.monologue || DEFAULT_MONOLOGUE).trim()}）`;
+}
+
 // ── 小工具 ──
 const now = () => new Date().toISOString();
 const newId = () => crypto.randomBytes(9).toString("base64url");
@@ -306,6 +323,7 @@ async function startJob(conv, userText, opts = {}) {
     }
     // 刚挂了电话：先递张纸条，免得它还用电话腔回打的字
     if (!job.call && conv.afterCall) { body = `${conv.afterCall}\n\n${body}`; delete conv.afterCall; }
+    if (!job.call) body = `${body}\n\n${turnReminder()}`;
     const prompt = `[${localStamp()} · 自建前端${job.call ? " · 电话中" : ""}]\n${body}`;
     let r = job.stopped ? { gotText: false, code: 0, stderr: "" } : await runClaude(job, prompt, conv.sessionId);
     if (!r.gotText && !job.stopped && conv.sessionId && /no conversation found|session.*not found/i.test(r.stderr + (r.resultError || ""))) {
@@ -527,6 +545,15 @@ async function handle(req, res) {
 
   if (p === "/api/me") return send(res, 200, { ok: true, model: MODEL, voice: !!XI_KEY, ears: !!EARS_PASSWORD, mcp: Object.keys(mcpServers) });
   if (p === "/api/vitals") return send(res, 200, await vitals());
+  if (p === "/api/settings" && m === "GET") return send(res, 200, { ...loadSettings(), defaults: DEFAULT_SETTINGS });
+  if (p === "/api/settings" && m === "PUT") {
+    const body = await readBody(req);
+    const st = loadSettings();
+    if (typeof body.monologueOn === "boolean") st.monologueOn = body.monologueOn;
+    if (typeof body.monologue === "string") st.monologue = body.monologue.slice(0, 4000).trim() || DEFAULT_MONOLOGUE;
+    await fsp.writeFile(SETTINGS_FILE, JSON.stringify(st, null, 2));
+    return send(res, 200, st);
+  }
 
   if (p === "/api/conversations" && m === "GET") return send(res, 200, { items: await listConvs() });
   if (p === "/api/conversations" && m === "POST") {
