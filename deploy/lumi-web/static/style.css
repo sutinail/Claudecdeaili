@@ -429,9 +429,15 @@ html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoser
   background: radial-gradient(circle, rgba(255,255,255,.42), rgba(255,255,255,0) 68%);
   box-shadow: none;
 }
-.seal.quill svg { width: 32px; height: 32px; filter: none; opacity: .58; transform: translate(1px, -1px); transition: transform .5s cubic-bezier(.3,.7,.2,1), opacity .3s; }
-.seal.quill:active svg { transform: translate(4px, -4px) rotate(-8deg); opacity: .85; }
-.composer:focus-within .seal.quill svg { opacity: .78; }
+.seal.quill img {
+  width: 40px; height: auto; display: block; pointer-events: none; -webkit-user-drag: none;
+  opacity: .9; transform: translate(1px, -2px);
+  /* 淡白羽毛放在浅背景上会化掉，留一丝冷灰的影子托住它 */
+  filter: drop-shadow(0 1px 1.5px rgba(70,74,92,.32)) drop-shadow(0 0 6px rgba(255,255,255,.6));
+  transition: transform .5s cubic-bezier(.3,.7,.2,1), opacity .3s;
+}
+.seal.quill:active img { transform: translate(4px, -5px) rotate(-8deg); opacity: 1; }
+.composer:focus-within .seal.quill img { opacity: 1; }
 .seal#stop { border: 1px solid var(--frost-rim); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .seal.quill, :root:not([data-theme="light"]) .seal#stop {
