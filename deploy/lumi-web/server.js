@@ -154,7 +154,7 @@ async function listConvs() {
     const c = await loadConv(f.slice(0, -5));
     if (!c) continue;
     const last = c.messages[c.messages.length - 1];
-    out.push({ id: c.id, title: c.title, updated: c.updated, preview: last ? last.text.replace(/<monologue>[\s\S]*?(<\/monologue>|$)/, "").trim().slice(0, 40) : "", busy: jobs.has(c.id) });
+    out.push({ id: c.id, title: c.title, updated: c.updated, preview: last ? last.text.replace(/[<＜]\s*monologue\s*[>＞][\s\S]*?(?:[<＜]\s*\/\s*monologue\s*[>＞]|$)/gi, "").trim().slice(0, 40) : "", busy: jobs.has(c.id) });
   }
   return out.sort((a, b) => (a.updated < b.updated ? 1 : -1));
 }

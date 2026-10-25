@@ -299,15 +299,15 @@ function msgEl(msg, streaming = false) {
   return row;
 }
 
-// Lumi 在回复最前面写的 <monologue> 心里话，收进 thinking · monologue 里，不放在正文
+// Lumi 写的 <monologue> 心里话，收进 thinking · monologue 里，不放在正文。
+// 不要求它在最前面（先跑了工具、前面多了空白或别的字都照样认），全角括号、多空格也认
+const MONO_RE = /[<＜]\s*monologue\s*[>＞]([\s\S]*?)(?:[<＜]\s*\/\s*monologue\s*[>＞]|$)/gi;
 function splitMonologue(text) {
-  const m = text.match(/^\s*<monologue>([\s\S]*?)(<\/monologue>|$)/);
-  if (!m) {
-    // 流式刚开头，标签还没打完整时先藏起来
-    if (/^\s*<m?o?n?o?l?o?g?u?e?>?$/i.test(text) && text.trim()) return { mono: "", rest: "" };
-    return { mono: "", rest: text };
-  }
-  return { mono: m[1].trim(), rest: m[2] ? text.slice(m.index + m[0].length).replace(/^\s+/, "") : "" };
+  const thoughts = [];
+  let rest = text.replace(MONO_RE, (_, t) => { if (t.trim()) thoughts.push(t.trim()); return ""; });
+  // 流式时标签可能只打了一半（"<mono"），先藏起来
+  rest = rest.replace(/[<＜]\s*\/?\s*m?o?n?o?l?o?g?u?e?\s*$/i, "");
+  return { mono: thoughts.join("\n\n"), rest: rest.replace(/^\s+/, "").replace(/\n{3,}/g, "\n\n") };
 }
 
 // 一步工具：它是什么、我填了什么、身体或记忆回了什么
