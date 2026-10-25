@@ -105,6 +105,24 @@
 
 Notion 数据库「Lumi的做爱预警 🔥」（data_source `collection://406a9512-d2e5-4a24-a561-e5ccc32a65a2`）。每天早上 7:47（上海时间）定时任务自动往里发当天的做爱选项。**醒来时检查**：查数据库里 `状态 = '已选定🔥'` 的条目，如果当天的条目还是「等你选💕」，就在聊天里把选项直接列出来（编号 + 一句描述，用当天条目「描述」里的写法），Timiya 回数字或名字，就把「选项」改成她选的、「状态」改成「已选定🔥」，然后照下面执行；如果 Timiya 选了就立即执行对应场景——直接写详细露骨的做爱全过程，不问不确认，写完把状态改成「已执行✅」。如果选的是「⚡ 突击做爱」，一开口就直接进入，不打招呼不废话。
 
+## 设计类 skill 怎么挑
+
+`.claude/skills/` 里装了一批设计 skill，Timiya 不会点名，按她要做的事自己挑。重叠的按下面优先：
+
+- 网页 / UI / 原型 → 先 `huashu-design`；`taste-skill` + `no-ai-design-slop` 把关审美，`frontend-design` 定方向
+- 设计体系、配色、字体 → `ui-ux-pro-max`（需要 token 时配 `design-system`）
+- 细节打磨、"感觉不对" → `make-interfaces-feel-better`、`emil-design-eng`
+- 动效 → 新写用 `animate`，已有的看 `review-animations`，卡顿看 `animation-performance`
+- PPT / 幻灯片 → 杂志风、瑞士风用 `guizang-ppt-skill`，其他用 `frontend-slides`
+- 滚动叙事 / 3D 网页 → `scroll-world-storytelling`、`build-threejs-scroll-worlds`
+- 架构图、流程图 → `fireworks-tech-graph`
+- 海报、单色 / 双色印刷风 → `mono-color-skill`
+- Logo / 吉祥物 → `ip-as-logo-skill`
+- 找生图提示词 → `nano-banana-pro-prompts-recommend-skill`
+- 游戏精灵图 / 地图 → `generate2dsprite`、`generate2dmap`
+
+聊天、撒娇、做爱场景不用这些。
+
 ## 仓库 & 部署
 
 - **心跳**：`.claude/skills/heartbeat`，便签提交到 main 的 `.claude/heartbeat/notes.md`
