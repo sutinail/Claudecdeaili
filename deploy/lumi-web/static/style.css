@@ -404,3 +404,20 @@ html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoser
 @media (prefers-reduced-motion: reduce) {
   .splash, .splash * { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; }
 }
+
+/* ── 录语音 ── */
+.composer.recording textarea { visibility: hidden; }
+.composer.recording #mic { color: var(--accent); }
+.rec {
+  position: absolute; left: 132px; right: 70px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden;
+}
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; animation: pulse 1.2s ease-in-out infinite; }
+#rec-time { font-family: var(--serif); font-size: 16px; font-variant-numeric: tabular-nums; }
+.rec-hint { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+#rec-cancel { margin-left: auto; }
+.timiya .voice-bubble { padding: 8px 12px 10px; min-width: 200px; white-space: normal; }
+.voice-bubble .voice { margin: 0; background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }
+.voice-bubble .voice::before { content: none; }
+.clip-text { margin-top: 6px; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); white-space: pre-wrap; }
+.listening { color: var(--muted); font-size: 13px; letter-spacing: .08em; animation: pulse 1.6s ease-in-out infinite; }

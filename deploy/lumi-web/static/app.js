@@ -238,7 +238,10 @@ async function playVoice(card) {
 
 els.messages.addEventListener("click", (e) => {
   const play = e.target.closest(".voice-play");
-  if (play && play.tagName === "BUTTON") return playVoice(play.closest(".voice"));
+  if (play && play.tagName === "BUTTON") {
+    const card = play.closest(".voice");
+    return card.classList.contains("clip") ? playClip(card) : playVoice(card);
+  }
   const tog = e.target.closest(".voice-toggle");
   if (tog) {
     const s = tog.closest(".voice").nextElementSibling;
@@ -274,9 +277,15 @@ function msgEl(msg, streaming = false) {
     row.appendChild(st);
   }
   if (msg.role === "timiya") {
+    row.dataset.id = msg.id || "";
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = msg.text;
+    if (msg.kind === "voice") {
+      bubble.classList.add("voice-bubble");
+      bubble.innerHTML = clipHtml(msg);
+    } else {
+      bubble.textContent = msg.text;
+    }
     row.appendChild(bubble);
     return row;
   }
@@ -356,7 +365,11 @@ function fillLumi(row, msg, streaming) {
   }
   const body = document.createElement("div");
   body.className = "body";
-  body.appendChild(renderLumiBody(rest, streaming));
+  if (streaming && !rest.trim() && msg.status) {
+    body.innerHTML = `<span class="listening">${esc(msg.status)}</span>`;
+  } else {
+    body.appendChild(renderLumiBody(rest, streaming));
+  }
   inner.appendChild(body);
   if (msg.error) {
     const e = document.createElement("div");
@@ -457,6 +470,8 @@ async function attachStream(convId) {
           if (i >= 0) live.msg.steps[i] = ev.step; else live.msg.steps.push(ev.step);
         }
         else if (ev.t === "error") live.msg.error = ev.error;
+        else if (ev.t === "status") live.msg.status = ev.text;
+        else if (ev.t === "heard") setHeard(ev.id, ev.text);
         else if (ev.t === "done") finished = true;
         paintLive();
       }
@@ -604,6 +619,102 @@ function autosize() {
 }
 els.input.addEventListener("input", autosize);
 els.stop.addEventListener("click", () => { if (state.convId) api(`/api/conversations/${state.convId}/stop`, { method: "POST" }).catch(() => {}); });
+
+// ── 语音：直接在聊天里录，交给耳朵转写、画语调，再让 Lumi 去听 ──
+function fmtDur(sec) {
+  const s = Math.max(0, Math.round(sec || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function clipHtml(msg) {
+  const bars = Array.from({ length: 14 }, (_, i) => `<i style="height:${5 + Math.round(9 * Math.abs(Math.sin(i * 1.3 + (msg.duration || 3))))}px"></i>`).join("");
+  const words = msg.text ? esc(msg.text) : `<span class="listening">耳朵在听…</span>`;
+  return `<div class="voice clip" data-src="${esc(msg.audio || "")}">
+      <button class="voice-play" type="button" aria-label="播放我的语音">${PLAY_ICON}</button>
+      <div class="voice-body"><div class="voice-wave">${bars}</div><div class="voice-meta"><span>${fmtDur(msg.duration)}</span></div></div>
+    </div>
+    <div class="clip-text">${words}</div>`;
+}
+
+function setHeard(id, text) {
+  const t = els.messages.querySelector(`.msg[data-id="${CSS.escape(id)}"] .clip-text`);
+  if (t) t.textContent = text || "（没听出文字）";
+}
+
+function playClip(card) {
+  if (audioCard === card && !audio.paused) { audio.pause(); return; }
+  if (audioCard && audioCard !== card) setCard(audioCard, false);
+  audioCard = card;
+  audio.src = card.dataset.src;
+  audio.play().catch(() => toast("这条语音放不出来"));
+}
+
+const mic = document.getElementById("mic");
+const recBar = document.getElementById("rec");
+const recTime = document.getElementById("rec-time");
+let rec = null;
+
+async function startRecording() {
+  if (state.busy || !state.convId) return toast("等我说完这句再录嘛");
+  if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) return toast("这个浏览器不能录音，用 Safari 打开试试");
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { return toast("没拿到麦克风权限：设置 → Safari → 麦克风，允许这个网站"); }
+  const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
+  const mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  const chunks = [];
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec = { mr, stream, chunks, start: Date.now(), cancel: false, timer: 0 };
+  rec.timer = setInterval(() => {
+    const sec = (Date.now() - rec.start) / 1000;
+    recTime.textContent = fmtDur(sec);
+    if (sec >= 300) stopRecording();
+  }, 250);
+  mr.onstop = () => finishRecording(rec);
+  mr.start(250);
+  recTime.textContent = "0:00";
+  els.composer.classList.add("recording");
+  recBar.hidden = false;
+}
+
+function stopRecording(cancel = false) {
+  if (!rec) return;
+  rec.cancel = cancel;
+  clearInterval(rec.timer);
+  if (rec.mr.state !== "inactive") rec.mr.stop();
+}
+
+async function finishRecording(r) {
+  r.stream.getTracks().forEach((t) => t.stop());
+  rec = null;
+  els.composer.classList.remove("recording");
+  recBar.hidden = true;
+  const sec = (Date.now() - r.start) / 1000;
+  if (r.cancel) return;
+  if (sec < 0.8) return toast("太短啦，按一下开始、说完再按一下");
+  const blob = new Blob(r.chunks, { type: r.mr.mimeType || "audio/mp4" });
+  const empty = els.messages.querySelector(".empty");
+  if (empty) empty.remove();
+  setBusy(true);
+  try {
+    const res = await fetch(`/api/conversations/${state.convId}/voice?dur=${sec.toFixed(1)}`, {
+      method: "POST", body: blob, credentials: "same-origin", headers: { "Content-Type": blob.type.split(";")[0] },
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || `出错了 (${res.status})`);
+    els.messages.appendChild(msgEl(j.message));
+    toBottom();
+    state.live = null;
+    startLive();
+    attachStream(state.convId);
+  } catch (e) {
+    setBusy(false);
+    toast(e.message);
+  }
+}
+
+mic.addEventListener("click", () => (rec ? stopRecording() : startRecording()));
+document.getElementById("rec-cancel").addEventListener("click", () => stopRecording(true));
 
 // ── 体征 ──
 async function refreshVitals() {
