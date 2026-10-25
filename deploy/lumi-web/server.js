@@ -400,8 +400,15 @@ async function earsUpload(file, mime) {
   const fd = new FormData();
   fd.append("audio", new Blob([await fsp.readFile(file)], { type: mime }), path.basename(file));
   const r = await fetch(`${EARS_URL}/upload`, { method: "POST", headers: { Cookie: earsCookie() }, body: fd, signal: AbortSignal.timeout(60_000) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.id) throw new Error(`耳朵没收下这条语音：${j.error || r.status}`);
+  const raw = await r.text().catch(() => "");
+  let j = {};
+  try { j = JSON.parse(raw); } catch {}
+  if (!r.ok || !j.id) {
+    // 耳朵自己回的错都带中文 error；空着的 404 多半是隧道没认出 ears 这个域名
+    const why = j.error || (r.status === 404 && !raw.trim() ? "404，隧道没把 ears 域名转到耳朵上" : `${r.status} ${raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80)}`);
+    console.warn(`ears upload ${EARS_URL}/upload → ${r.status} ${raw.slice(0, 200)}`);
+    throw new Error(`耳朵没收下这条语音：${why}`);
+  }
   return j.id;
 }
 
