@@ -190,7 +190,11 @@ function systemPrompt() {
   catch { console.warn(`⚠️ 没读到人格文件 ${PERSONA_FILE}`); }
   let front = "";
   try { front = fs.readFileSync(FRONT_PROMPT_FILE, "utf8"); } catch {}
-  return [persona, front].filter(Boolean).join("\n\n---\n\n");
+  const st = loadSettings();
+  const mono = st.monologueOn
+    ? `### Timiya 在设置里写的心里话要求\n\n${String(st.monologue || DEFAULT_MONOLOGUE).trim()}`
+    : "### 心里话\n\nTimiya 在设置里把心里话关了：不用写 <monologue>，直接回她。";
+  return [persona, front, mono].filter(Boolean).join("\n\n---\n\n");
 }
 
 function childEnv() {
@@ -564,17 +568,24 @@ async function handle(req, res) {
 
   // 删除单条消息：DELETE /api/conversations/:id/messages/:msgId
   const dm = p.match(/^\/api\/conversations\/([A-Za-z0-9_-]+)\/messages\/([A-Za-z0-9_-]+)$/);
-  if (dm && m === "DELETE") {
+  if (dm && (m === "DELETE" || m === "PATCH")) {
     const [, cid, mid] = dm;
-    const job = jobs.get(cid);
-    if (job) return send(res, 409, { error: "Lumi 还在说话呢" });
+    if (jobs.get(cid)) return send(res, 409, { error: "Lumi 还在说话呢" });
     const conv = await loadConv(cid);
     if (!conv) return send(res, 404, { error: "找不到这段对话" });
-    const idx = conv.messages.findIndex((x) => x.id === mid);
-    if (idx < 0) return send(res, 404, { error: "找不到这条消息" });
-    conv.messages.splice(idx, 1);
+    const msg = conv.messages.find((x) => x.id === mid);
+    if (!msg) return send(res, 404, { error: "找不到这条消息" });
+    if (m === "PATCH") {
+      const { text } = await readBody(req);
+      if (typeof text !== "string" || !text.trim()) return send(res, 400, { error: "空的" });
+      msg.text = text.slice(0, 20000);
+      msg.edited = now();
+    } else {
+      // 删掉一通电话时，电话里说的那些话也一起删
+      conv.messages = conv.messages.filter((x) => x !== msg && !(msg.role === "call" && x.call === msg.callId));
+    }
     await saveConv(conv);
-    return send(res, 200, { ok: true });
+    return send(res, 200, { ok: true, message: m === "PATCH" ? msg : undefined });
   }
 
   const cm = p.match(/^\/api\/conversations\/([A-Za-z0-9_-]+)(\/[a-z]+)?$/);

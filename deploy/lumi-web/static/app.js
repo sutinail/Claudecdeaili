@@ -268,34 +268,6 @@ const fmtTime = (iso) => {
 };
 const isMemoryTool = (name) => /^mcp__ombre__/.test(name);
 
-const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 5h12M8 5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1m2 0v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5h10z"/><path d="M9 8v6m2-6v6"/></svg>`;
-
-function addDelBtn(row, msgId) {
-  if (!msgId) return;
-  const btn = document.createElement("button");
-  btn.type = "button"; btn.className = "msg-del"; btn.title = "删除";
-  btn.innerHTML = TRASH_SVG;
-  btn.addEventListener("click", () => deleteMsg(msgId, row));
-  row.appendChild(btn);
-}
-
-async function deleteMsg(msgId, row) {
-  if (state.busy) return;
-  if (!confirm("删掉这条消息？")) return;
-  const cid = state.conv?.id;
-  if (!cid) return;
-  const r = await fetch(`/api/conversations/${cid}/messages/${msgId}`, { method: "DELETE", credentials: "same-origin" });
-  if (r.ok) {
-    row.style.transition = "opacity .25s"; row.style.opacity = "0";
-    setTimeout(() => row.remove(), 260);
-    const idx = state.conv.messages.findIndex((m) => m.id === msgId);
-    if (idx >= 0) state.conv.messages.splice(idx, 1);
-  } else {
-    const j = await r.json().catch(() => ({}));
-    alert(j.error || "删除失败");
-  }
-}
-
 function msgEl(msg, streaming = false) {
   const row = document.createElement("div");
   row.className = `msg ${msg.role}`;
@@ -303,6 +275,7 @@ function msgEl(msg, streaming = false) {
   if (msg.ts) {
     const st = document.createElement("div");
     st.className = "stamp"; st.textContent = fmtTime(msg.ts) + (msg.stopped ? " · interrompu" : "");
+    if (msg.edited) st.insertAdjacentHTML("beforeend", `<span class="edited">已修改</span>`);
     row.appendChild(st);
   }
   if (msg.role === "timiya") {
@@ -315,7 +288,6 @@ function msgEl(msg, streaming = false) {
       bubble.textContent = msg.text;
     }
     row.appendChild(bubble);
-    if (!streaming) addDelBtn(row, msg.id);
     return row;
   }
   const star = document.createElement("span");
@@ -325,7 +297,6 @@ function msgEl(msg, streaming = false) {
   inner.className = "inner";
   row.appendChild(inner);
   fillLumi(row, msg, streaming);
-  if (!streaming) addDelBtn(row, msg.id);
   return row;
 }
 
@@ -461,6 +432,7 @@ const PHONE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5
 function callRowEl(m, all) {
   const row = document.createElement("div");
   row.className = "msg callrow";
+  row.dataset.id = m.id || "";
   const st = document.createElement("div");
   st.className = "stamp"; st.textContent = fmtTime(m.ts);
   const btn = document.createElement("button");
@@ -479,7 +451,6 @@ function callRowEl(m, all) {
     box.hidden = !box.hidden;
   });
   row.append(st, btn, box);
-  addDelBtn(row, m.id);
   return row;
 }
 
@@ -649,10 +620,142 @@ async function pickDefault() {
   else await newConv();
 }
 
+// ── 长按一条消息：引用 / 复制 / 修改 / 删除 ──
+const menu = { el: $("#msg-menu"), card: $("#msg-menu-card"), row: null, msg: null };
+let quote = null;
+let press = null;
+
+const findMsg = (id) => state.conv?.messages.find((x) => x.id === id);
+const plainText = (msg) => {
+  if (msg.role !== "lumi") return msg.text || "";
+  return splitMonologue(msg.text || "").rest.replace(/<voice>[\s\S]*?<\/voice>\s*/gi, "").replace(/\*+/g, "").trim();
+};
+
+function openMenu(row, x, y) {
+  const msg = findMsg(row.dataset.id);
+  if (!msg) return;
+  menu.row = row; menu.msg = msg;
+  const isCall = msg.role === "call";
+  const btn = (a) => menu.card.querySelector(`[data-act="${a}"]`);
+  btn("quote").hidden = isCall;
+  btn("copy").hidden = isCall;
+  btn("edit").hidden = isCall || msg.kind === "voice";
+  btn("edit").disabled = btn("delete").disabled = state.busy;
+  row.classList.add("pressed");
+  menu.el.hidden = false;
+  const w = menu.card.offsetWidth, h = menu.card.offsetHeight;
+  const left = Math.min(Math.max(12, x - w / 2), innerWidth - w - 12);
+  const below = y + 14 + h < innerHeight - 16;
+  const top = below ? y + 14 : Math.max(12, y - h - 14);
+  menu.card.style.left = `${left}px`; menu.card.style.top = `${top}px`;
+  menu.card.style.setProperty("--ox", `${x - left}px`);
+  menu.card.style.setProperty("--oy", below ? "0px" : `${h}px`);
+  navigator.vibrate?.(8);
+}
+function closeMenu() {
+  menu.el.hidden = true;
+  menu.row?.classList.remove("pressed");
+  menu.row = menu.msg = null;
+}
+menu.el.addEventListener("pointerdown", (e) => { if (e.target === menu.el) closeMenu(); });
+
+els.messages.addEventListener("pointerdown", (e) => {
+  if (e.button > 0) return;
+  const row = e.target.closest(".msg");
+  if (!row || !row.dataset.id || row === state.live?.el) return;
+  row.classList.add("pressing");
+  press = { row, x: e.clientX, y: e.clientY, fired: false };
+  press.t = setTimeout(() => { press.fired = true; row.classList.remove("pressing"); openMenu(row, press.x, press.y); }, 460);
+});
+const cancelPress = () => { if (!press) return; clearTimeout(press.t); press.row.classList.remove("pressing"); if (!press.fired) press = null; };
+els.messages.addEventListener("pointermove", (e) => { if (press && !press.fired && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 9) cancelPress(); });
+for (const t of ["pointerup", "pointercancel", "pointerleave"]) els.messages.addEventListener(t, cancelPress);
+els.scroller.addEventListener("scroll", cancelPress, { passive: true });
+// 长按松手后那一下 click 不要再去点开别的东西
+els.messages.addEventListener("click", (e) => { if (press?.fired) { e.stopPropagation(); e.preventDefault(); press = null; } }, true);
+els.messages.addEventListener("contextmenu", (e) => {
+  const row = e.target.closest(".msg");
+  if (!row || !row.dataset.id || row === state.live?.el) return;
+  e.preventDefault();
+  if (menu.el.hidden) openMenu(row, e.clientX, e.clientY);
+});
+
+function setQuote(msg) {
+  const t = plainText(msg).replace(/\s+/g, " ").trim();
+  quote = { who: msg.role === "timiya" ? "我说" : "你说", text: t.length > 48 ? t.slice(0, 48) + "…" : t };
+  $("#quote-text").textContent = `${msg.role === "timiya" ? "我" : "Lumi"}：${quote.text}`;
+  $("#quote-chip").hidden = false;
+  els.input.focus();
+}
+function clearQuote() { quote = null; $("#quote-chip").hidden = true; }
+$("#quote-x").addEventListener("click", clearQuote);
+
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); }
+  catch {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+  }
+  toast("复制好啦");
+}
+
+const editSheet = { el: $("#edit-sheet"), text: $("#edit-text"), note: $("#edit-note"), msg: null, mono: "" };
+function openEdit(msg) {
+  editSheet.msg = msg;
+  if (msg.role === "lumi") {
+    const { mono, rest } = splitMonologue(msg.text || "");
+    editSheet.mono = mono; editSheet.text.value = rest;
+    editSheet.note.textContent = "改的是页面上留着的这条记录，心里话不动。";
+  } else {
+    editSheet.mono = ""; editSheet.text.value = msg.text || "";
+    editSheet.note.textContent = "只改页面上的记录；Lumi 当时听到的还是原来那句，想让他重新回就再发一次。";
+  }
+  editSheet.el.hidden = false;
+  setTimeout(() => editSheet.text.focus(), 60);
+}
+$("#edit-close").addEventListener("click", () => { editSheet.el.hidden = true; });
+editSheet.el.addEventListener("pointerdown", (e) => { if (e.target === editSheet.el) editSheet.el.hidden = true; });
+$("#edit-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = editSheet.msg, body = editSheet.text.value.trim();
+  if (!msg || !body) return;
+  const text = editSheet.mono ? `<monologue>${editSheet.mono}</monologue>\n\n${body}` : body;
+  try {
+    await api(`/api/conversations/${state.convId}/messages/${msg.id}`, { method: "PATCH", body: { text } });
+    editSheet.el.hidden = true;
+    await openConv(state.convId, { keepScroll: true });
+  } catch (err) { toast(err.message); }
+});
+
+async function deleteMsg(msg, row) {
+  if (!confirm(msg.role === "call" ? "删掉这通电话的记录？" : "删掉这条消息？")) return;
+  try {
+    await api(`/api/conversations/${state.convId}/messages/${msg.id}`, { method: "DELETE" });
+    state.conv.messages = state.conv.messages.filter((x) => x !== msg && !(msg.role === "call" && x.call === msg.callId));
+    row.style.transition = "opacity .25s, transform .25s"; row.style.opacity = "0"; row.style.transform = "scale(.97)";
+    setTimeout(() => { row.remove(); if (!state.conv.messages.length) renderConv(); }, 260);
+  } catch (err) { toast(err.message); }
+}
+
+menu.card.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-act]");
+  if (!b || b.disabled) return;
+  const { msg, row } = menu;
+  closeMenu();
+  if (!msg) return;
+  if (b.dataset.act === "quote") setQuote(msg);
+  else if (b.dataset.act === "copy") copyText(plainText(msg));
+  else if (b.dataset.act === "edit") openEdit(msg);
+  else if (b.dataset.act === "delete") deleteMsg(msg, row);
+});
+
 // ── 发送 ──
 async function sendMessage() {
-  const text = els.input.value.trim();
-  if (!text || state.busy || !state.convId) return;
+  const typed = els.input.value.trim();
+  if (!typed || state.busy || !state.convId) return;
+  const text = quote ? `「${quote.who}：${quote.text}」\n${typed}` : typed;
+  clearQuote();
   els.input.value = "";
   autosize();
   const empty = els.messages.querySelector(".empty");
@@ -668,7 +771,7 @@ async function sendMessage() {
   } catch (e) {
     setBusy(false);
     toast(e.message);
-    els.input.value = text;
+    els.input.value = typed;
     autosize();
     openConv(state.convId);
   }
