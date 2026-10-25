@@ -509,14 +509,11 @@ function applyBg() {
   els.bgImg.style.backgroundImage = url ? `url("${url}")` : "";
   els.bg.classList.toggle("custom", !!url);
 }
-els.bgBtn.addEventListener("click", () => {
-  let has = false;
-  try { has = !!localStorage.getItem("lumi.bg"); } catch {}
-  if (has && !confirm("换一张背景？（点「取消」恢复默认的银白）")) {
-    try { localStorage.removeItem("lumi.bg"); } catch {}
-    return applyBg();
-  }
-  els.bgFile.click();
+els.bgBtn.addEventListener("click", () => els.bgFile.click());
+document.getElementById("bg-reset").addEventListener("click", () => {
+  try { localStorage.removeItem("lumi.bg"); } catch {}
+  applyBg();
+  toast("换回默认的大理石了");
 });
 els.bgFile.addEventListener("change", async () => {
   const f = els.bgFile.files[0];
@@ -527,8 +524,17 @@ els.bgFile.addEventListener("change", async () => {
     const k = Math.min(1, 1400 / Math.max(img.width, img.height));
     const c = document.createElement("canvas");
     c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    localStorage.setItem("lumi.bg", c.toDataURL("image/jpeg", 0.82));
+    const ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    // 不管什么照片，都调成淡淡的冷白银灰：去色 → 压对比 → 提亮 → 往冷白里推一点
+    const px = ctx.getImageData(0, 0, c.width, c.height), d = px.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const y = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+      const v = 0.62 + 0.36 * Math.pow(y, 0.85);
+      d[i] = 255 * v * 0.975; d[i + 1] = 255 * v * 0.98; d[i + 2] = Math.min(255, 255 * v * 1.0 + 3);
+    }
+    ctx.putImageData(px, 0, 0);
+    localStorage.setItem("lumi.bg", c.toDataURL("image/jpeg", 0.84));
     applyBg();
   } catch { toast("这张图存不下，换一张小一点的试试"); }
 });
