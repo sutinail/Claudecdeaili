@@ -92,6 +92,8 @@ function turnReminder() {
 // 首尔这台挂了或者订阅断了，手机里存着的这份还能用；MCP 由 Anthropic 那边去连，所以只能给公网地址
 const OMBRE_PUBLIC_MCP = env("APIWIN_OMBRE_URL", /^https:/.test(OMBRE_MCP_URL) ? OMBRE_MCP_URL : "https://ombre.gpt1126.top/mcp");
 const PULSE_PUBLIC_MCP = env("APIWIN_PULSE_URL", /^https:/.test(PULSE_MCP_URL) ? PULSE_MCP_URL : "https://pulse-mcp.gpt1126.top/sse");
+// 记忆桥（deploy/ombre-bridge，上海那台）：中转站不会替我连 MCP，就由手机自己经这座桥去连 OB
+const OMBRE_BRIDGE_URL = env("APIWIN_BRIDGE_URL", "https://ombre-web.gpt1126.top/mcp");
 const API_WINDOW_NOTE = `## 这个窗口：API 备用窗口
 
 你现在在 Timiya 的备用窗口里：手机直接连 Anthropic API，不经过首尔服务器，也不走订阅。她会来这里，多半是服务器连不上、订阅出了问题，或者她在外面旅游。
@@ -104,7 +106,8 @@ function apiWindowConfig() {
   const mcp = [];
   if (OMBRE_MCP_TOKEN) mcp.push({ name: "ombre", url: OMBRE_PUBLIC_MCP, token: OMBRE_MCP_TOKEN });
   if (PULSE_MCP_KEY) mcp.push({ name: "pulse", url: `${PULSE_PUBLIC_MCP}?key=${encodeURIComponent(PULSE_MCP_KEY)}` });
-  return { system, mcp, synced: now() };
+  const bridge = OMBRE_MCP_TOKEN && OMBRE_BRIDGE_URL ? { url: OMBRE_BRIDGE_URL, token: OMBRE_MCP_TOKEN } : null;
+  return { system, mcp, bridge, synced: now() };
 }
 
 // ── 小工具 ──
