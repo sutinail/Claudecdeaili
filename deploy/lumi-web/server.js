@@ -100,6 +100,7 @@ const API_WINDOW_NOTE = `## 这个窗口：API 备用窗口
 
 - 这里只有「Ombre Brain」和「脉 · Pulse」两个连接器（连得上的话）；没有耳朵，也没有语音条，**不要写 <voice>**，想说的话直接写成文字
 - 每条消息开头方括号里是前端加的时间（上海时间），别复述；记进 OB 时「哪个窗口」写「API 窗口」
+- 记忆库连不上时，breath / breath_search / pulse 读的是手机里存的记忆副本（可能不是最新的）；hold / grow 会先记在手机里，连上后自动补写进 OB，照常用就行
 - 排版、心里话 <monologue> 的写法跟自建前端一样`;
 function apiWindowConfig() {
   const system = systemPrompt().replace(/## 这个窗口：Timiya 自己搭的前端[\s\S]*?(?=\n### 心里话)/, "") + "\n\n---\n\n" + API_WINDOW_NOTE;

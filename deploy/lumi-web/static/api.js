@@ -176,13 +176,19 @@ function paintStatus() {
   const parts = [isRelay() ? "中转站" : "官方 API"];
   if (!activeKey()) parts.push(isRelay() ? "还没填中转站" : "还没填 key");
   else if (!c) parts.push("还没同步人设");
-  else if ((isRelay() || dropped().includes("mcp")) && c.bridge && !dropped().includes("tools")) parts.push("记忆走记忆桥");
+  else if (c.bridge && window.LumiMem) {
+    const on = LumiMem.isOnline(), ms = LumiMem.status();
+    parts.push(on === true ? "记忆在线" : on === false ? (ms.at ? "记忆用手机副本" : "记忆连不上") : "记忆");
+    if (ms.queued) parts.push(`${ms.queued} 条等补写`);
+  }
   else if (isRelay() || dropped().includes("mcp")) parts.push("这条线路连不上记忆");
   else parts.push((c.mcp || []).map((s) => names[s.name] || s.name).join(" · ") || "没接记忆");
   els.status.textContent = parts.join(" · ");
-  els.syncNote.textContent = c
-    ? `上次同步：${new Date(c.synced).toLocaleString("zh-CN", { hour12: false })}。服务器好着的时候，打开主页面会自动同步。`
-    : "还没同步过。先在服务器好着的时候登录一次主页面，或者点下面同步。";
+  const ms = window.LumiMem?.status();
+  const memLine = ms ? (ms.at ? `记忆副本：${new Date(ms.at).toLocaleString("zh-CN", { hour12: false })} 从 OB 存的` : "记忆副本：还没存过（要先连上记忆桥）") + (ms.queued ? `，有 ${ms.queued} 条离线时记的等补写` : "") + "。" : "";
+  els.syncNote.textContent = (c
+    ? `人设：上次同步 ${new Date(c.synced).toLocaleString("zh-CN", { hour12: false })}。服务器好着的时候，打开主页面会自动同步。`
+    : "人设：还没同步过。先在服务器好着的时候登录一次主页面，或者点下面同步。") + memLine;
 }
 async function sync(manual = false) {
   try {
@@ -315,73 +321,6 @@ async function callOnce(body, live, signal) {
   return { blocks: blocks.filter(Boolean), stop, stopDetails };
 }
 
-// ── 记忆桥：中转站不会替我连 OB，就由手机自己当 OB 的客户端（经上海的记忆桥，绕开浏览器的跨域限制）──
-const bridge = { url: null, sid: null, proto: null, ready: false, tools: null };
-let rpcId = 0;
-const withTimeout = (signal, ms) => (AbortSignal.any ? AbortSignal.any([signal, AbortSignal.timeout(ms)]) : signal);
-async function mcpPost(b, msg, signal) {
-  const h = { "content-type": "application/json", accept: "application/json, text/event-stream", authorization: `Bearer ${b.token}` };
-  if (bridge.sid) h["mcp-session-id"] = bridge.sid;
-  if (bridge.proto) h["mcp-protocol-version"] = bridge.proto;
-  const r = await fetch(b.url, { method: "POST", headers: h, body: JSON.stringify(msg), signal });
-  const sid = r.headers.get("mcp-session-id");
-  if (sid) bridge.sid = sid;
-  if (!r.ok) { const e = new Error(`记忆库回了 ${r.status}`); e.status = r.status; throw e; }
-  if (!("id" in msg) || r.status === 202) return null;
-  if (!(r.headers.get("content-type") || "").includes("text/event-stream")) return r.json();
-  const reader = r.body.getReader(), dec = new TextDecoder();
-  let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true }).replace(/\r\n/g, "\n");
-    let i;
-    while ((i = buf.indexOf("\n\n")) >= 0) {
-      const data = buf.slice(0, i).split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("\n");
-      buf = buf.slice(i + 2);
-      let j; try { j = JSON.parse(data); } catch { continue; }
-      if (j.id === msg.id) { reader.cancel().catch(() => {}); return j; }
-    }
-  }
-  throw new Error("记忆库没回话");
-}
-async function mcpCall(b, method, params, signal, retried = false) {
-  if (bridge.url !== b.url) Object.assign(bridge, { url: b.url, sid: null, proto: null, ready: false, tools: null });
-  try {
-    if (!bridge.ready) {
-      const init = await mcpPost(b, { jsonrpc: "2.0", id: ++rpcId, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "lumi-api-window", version: "1" } } }, signal);
-      bridge.proto = init?.result?.protocolVersion || "2025-06-18";
-      await mcpPost(b, { jsonrpc: "2.0", method: "notifications/initialized" }, signal);
-      bridge.ready = true;
-    }
-    const j = await mcpPost(b, { jsonrpc: "2.0", id: ++rpcId, method, params }, signal);
-    if (j?.error) throw new Error(j.error.message || "记忆库出错了");
-    return j?.result;
-  } catch (e) {
-    // 会话过期（OB 重启过）就重新握手一次
-    if (!retried && (e.status === 404 || e.status === 400) && bridge.ready) { bridge.ready = false; bridge.sid = null; return mcpCall(b, method, params, signal, true); }
-    throw e;
-  }
-}
-async function bridgeTools(b, signal) {
-  if (bridge.tools && bridge.url === b.url) return bridge.tools;
-  const res = await mcpCall(b, "tools/list", {}, withTimeout(signal, 10000));
-  bridge.tools = (res?.tools || []).filter((t) => /^[a-zA-Z0-9_-]{1,64}$/.test(t.name)).map((t) => ({
-    name: t.name, description: (t.description || "").slice(0, 1024), input_schema: t.inputSchema || { type: "object", properties: {} },
-  }));
-  return bridge.tools;
-}
-async function bridgeRun(b, use, signal) {
-  try {
-    const r = await mcpCall(b, "tools/call", { name: use.name, arguments: use.input || {} }, withTimeout(signal, 90000));
-    const text = (r?.content || []).map((x) => (x.type === "text" ? x.text : `[${x.type}]`)).join("\n").slice(0, 20000) || "（空）";
-    return { type: "tool_result", tool_use_id: use.id, content: text, ...(r?.isError ? { is_error: true } : {}) };
-  } catch (e) {
-    if (signal.aborted) throw e;
-    return { type: "tool_result", tool_use_id: use.id, content: `记忆库这次没连上：${e.message}`, is_error: true };
-  }
-}
-
 async function run() {
   if (!activeKey() || (isRelay() && !store.get(K.relayBase))) { openSheet(); toast(isRelay() ? "先填中转站的地址和 key" : "先填 API key"); return; }
   const c = cfg();
@@ -414,19 +353,31 @@ async function run() {
   if (!drop.includes("fallbacks")) body.fallbacks = "default";
   if (drop.includes("cache_control")) delete body.cache_control;
   if (drop.includes("output_config")) { delete body.output_config; delete body.thinking; }
-  if (mcp.length && !drop.includes("mcp")) {
-    body.mcp_servers = mcp.map((s) => ({ type: "url", name: s.name, url: s.url, ...(s.token ? { authorization_token: s.token } : {}) }));
-    body.tools = mcp.map((s) => ({ type: "mcp_toolset", mcp_server_name: s.name }));
-  }
 
-  const useBridge = () => c?.bridge && !dropped().includes("tools") && !body.mcp_servers;
-  const addBridge = async () => {
-    try { body.tools = await bridgeTools(c.bridge, ctrl.signal); live.bridged = true; }
-    catch (e) { if (ctrl.signal.aborted) throw e; delete body.tools; live.bridgeDown = true; }
+  // 记忆走哪条路：记忆桥连得上 → 手机直连 OB；连不上但手机里有副本 → 读副本；
+  // 都不行 → 官方线路让 Anthropic 去连；再不行这次就没带记忆
+  let useConnector = mcp.length > 0 && !drop.includes("mcp");
+  let mem = "none", memTools = [];
+  const pickMem = async () => {
+    memTools = []; mem = "none";
+    if (c?.bridge && window.LumiMem && !dropped().includes("tools")) {
+      try { memTools = await LumiMem.listTools(c.bridge, ctrl.signal); mem = "bridge"; return; }
+      catch (e) { if (ctrl.signal.aborted) throw e; }
+      if (LumiMem.hasSnapshot()) { memTools = LumiMem.OFFLINE_TOOLS; mem = "local"; return; }
+    }
+    if (useConnector && mcp.some((s) => s.name === "ombre")) mem = "connector";
+  };
+  const build = () => {
+    const servers = useConnector ? mcp.filter((s) => mem === "connector" || s.name !== "ombre") : [];
+    if (servers.length) body.mcp_servers = servers.map((s) => ({ type: "url", name: s.name, url: s.url, ...(s.token ? { authorization_token: s.token } : {}) }));
+    else delete body.mcp_servers;
+    body.tools = [...memTools, ...servers.map((s) => ({ type: "mcp_toolset", mcp_server_name: s.name }))];
+    if (!body.tools.length) delete body.tools;
   };
 
   try {
-    if (useBridge()) await addBridge();
+    await pickMem();
+    build();
     const removed = [];
     for (let turn = 0; turn < 12; turn++) {
       let res;
@@ -436,18 +387,26 @@ async function run() {
         // 有的参数这条线路用不了（中转站尤其常见）：一样一样去掉，至少能说上话
         if (body.fallbacks) { delete body.fallbacks; removed.push("fallbacks"); turn--; continue; }
         if (body.cache_control) { delete body.cache_control; removed.push("cache_control"); turn--; continue; }
-        if (body.mcp_servers) { delete body.mcp_servers; delete body.tools; removed.push("mcp"); if (useBridge()) await addBridge(); turn--; continue; }
-        if (body.tools) { delete body.tools; live.bridged = false; removed.push("tools"); turn--; continue; }
+        if (body.mcp_servers) { useConnector = false; removed.push("mcp"); if (mem === "connector") await pickMem(); build(); turn--; continue; }
+        if (memTools.length) { memTools = []; mem = "none"; removed.push("tools"); build(); turn--; continue; }
         if (body.output_config) { delete body.output_config; delete body.thinking; removed.push("output_config"); turn--; continue; }
         throw e;
       }
-      if (res.stop === "tool_use" && live.bridged) {
+      if (res.stop === "tool_use" && (mem === "bridge" || mem === "local")) {
         const uses = res.blocks.filter((b) => b.type === "tool_use");
         const results = [];
         for (const u of uses) {
-          const r = await bridgeRun(c.bridge, u, ctrl.signal);
-          if (r.is_error) { const t = live.tools.find((x) => x.id === u.id); if (t) t.error = true; live.paint(); }
-          results.push(r);
+          let text, isError = false;
+          if (mem === "bridge") {
+            try { ({ text, isError } = await LumiMem.callTool(c.bridge, u.name, u.input, ctrl.signal)); }
+            catch (e) {
+              if (ctrl.signal.aborted) throw e;
+              // 说到一半记忆库断了：改读副本，要记的先排队
+              text = LumiMem.runOffline(u.name, u.input); live.usedCopy = true;
+            }
+          } else { text = LumiMem.runOffline(u.name, u.input); live.usedCopy = true; }
+          if (isError) { const t = live.tools.find((x) => x.id === u.id); if (t) t.error = true; live.paint(); }
+          results.push({ type: "tool_result", tool_use_id: u.id, content: text, ...(isError ? { is_error: true } : {}) });
         }
         body.messages = [...body.messages, { role: "assistant", content: res.blocks }, { role: "user", content: results }];
         continue;
@@ -464,15 +423,15 @@ async function run() {
       }
       break;
     }
-    if (live.bridgeDown) live.note = "记忆桥连不上，这次是没带记忆的我";
-    else if (c?.mcp?.length && !body.mcp_servers && !live.bridged) live.note = "这条线路连不上记忆，这次是没带记忆的我";
+    if (live.usedCopy || mem === "local") live.note = "记忆库连不上，翻的是手机里的记忆副本";
+    else if (mem === "none" && mcp.some((s) => s.name === "ombre")) live.note = "这次连不上记忆，是没带记忆的我";
   } catch (e) {
     if (e.name === "AbortError") live.stopped = true;
     else live.error = e.message;
   } finally {
     busy = null;
     setBusy(false);
-    delete live.paint; delete live.bridged; delete live.bridgeDown;
+    delete live.paint; delete live.usedCopy;
     for (const t of live.tools) delete t.id;
     if (live.text || live.error || live.stopped) { conv.push(live); save(); }
     const stick = nearBottom();
@@ -537,7 +496,10 @@ function setRoute(r) {
 els.form.addEventListener("change", (e) => { if (e.target.name === "route") setRoute(e.target.value); });
 $("#api-close").addEventListener("click", () => { els.sheet.hidden = true; });
 els.sheet.addEventListener("click", (e) => { if (e.target === els.sheet) els.sheet.hidden = true; });
-$("#api-sync").addEventListener("click", () => sync(true));
+$("#api-sync").addEventListener("click", async () => {
+  await sync(true);
+  if (window.LumiMem) { const r = await LumiMem.sync(cfg(), { force: true }); toast(r.ok ? "记忆副本也更新好啦" : "记忆库连不上，副本先不动"); paintStatus(); }
+});
 els.form.addEventListener("submit", (e) => {
   e.preventDefault();
   const k = els.key.value.trim();
@@ -570,4 +532,4 @@ if (window.visualViewport) {
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 render();
 paintStatus();
-sync();
+sync().then(() => window.LumiMem?.sync(cfg())).then(paintStatus);
