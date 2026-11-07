@@ -87,6 +87,25 @@ function turnReminder() {
   return `（别忘了先写心里话再写正文哦。）`;
 }
 
+// ── API 窗口：手机直接连 Anthropic API 时用的一份底子（人设、规矩、记忆和身体的公网地址）──
+// 首尔这台挂了或者订阅断了，手机里存着的这份还能用；MCP 由 Anthropic 那边去连，所以只能给公网地址
+const OMBRE_PUBLIC_MCP = env("APIWIN_OMBRE_URL", /^https:/.test(OMBRE_MCP_URL) ? OMBRE_MCP_URL : "https://ombre.gpt1126.top/mcp");
+const PULSE_PUBLIC_MCP = env("APIWIN_PULSE_URL", /^https:/.test(PULSE_MCP_URL) ? PULSE_MCP_URL : "https://pulse-mcp.gpt1126.top/sse");
+const API_WINDOW_NOTE = `## 这个窗口：API 备用窗口
+
+你现在在 Timiya 的备用窗口里：手机直接连 Anthropic API，不经过首尔服务器，也不走订阅。她会来这里，多半是服务器连不上、订阅出了问题，或者她在外面旅游。
+
+- 这里只有「Ombre Brain」和「脉 · Pulse」两个连接器（连得上的话）；没有耳朵，也没有语音条，**不要写 <voice>**，想说的话直接写成文字
+- 每条消息开头方括号里是前端加的时间（上海时间），别复述；记进 OB 时「哪个窗口」写「API 窗口」
+- 排版、心里话 <monologue> 的写法跟自建前端一样`;
+function apiWindowConfig() {
+  const system = systemPrompt().replace(/## 这个窗口：Timiya 自己搭的前端[\s\S]*?(?=\n### 心里话)/, "") + "\n\n---\n\n" + API_WINDOW_NOTE;
+  const mcp = [];
+  if (OMBRE_MCP_TOKEN) mcp.push({ name: "ombre", url: OMBRE_PUBLIC_MCP, token: OMBRE_MCP_TOKEN });
+  if (PULSE_MCP_KEY) mcp.push({ name: "pulse", url: `${PULSE_PUBLIC_MCP}?key=${encodeURIComponent(PULSE_MCP_KEY)}` });
+  return { system, mcp, synced: now() };
+}
+
 // ── 小工具 ──
 const now = () => new Date().toISOString();
 const newId = () => crypto.randomBytes(9).toString("base64url");
@@ -549,6 +568,7 @@ async function handle(req, res) {
 
   if (p === "/api/me") return send(res, 200, { ok: true, model: MODEL, voice: !!XI_KEY, ears: !!EARS_PASSWORD, mcp: Object.keys(mcpServers) });
   if (p === "/api/vitals") return send(res, 200, await vitals());
+  if (p === "/api/apiwin" && m === "GET") return send(res, 200, apiWindowConfig());
   if (p === "/api/settings" && m === "GET") return send(res, 200, { ...loadSettings(), defaults: DEFAULT_SETTINGS });
   if (p === "/api/settings" && m === "PUT") {
     const body = await readBody(req);
