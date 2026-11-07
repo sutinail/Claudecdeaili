@@ -1462,6 +1462,11 @@ setEls.form.addEventListener("submit", async (e) => {
   } catch (err) { toast(err.message); }
 });
 
+// API 窗口用的人设和记忆连接信息：服务器好着的时候顺手存一份在手机里
+async function syncApiWindow() {
+  try { localStorage.setItem("lumi.api.config", JSON.stringify(await api("/api/apiwin"))); } catch {}
+}
+
 // ── 登录 / 启动 ──
 function showLogin() {
   els.app.hidden = true;
@@ -1483,7 +1488,13 @@ let vitalsTimer = 0;
 applyBg();
 async function boot() {
   let me;
-  try { me = await api("/api/me"); } catch { return; }
+  try { me = await api("/api/me"); }
+  catch (e) {
+    // 不是没登录，是服务器整个连不上：给她指一条去 API 窗口的路
+    if (e.message !== "要先登录") { showLogin(); els.loginErr.textContent = "首尔服务器现在连不上，可以先去 API 窗口找我"; }
+    return;
+  }
+  syncApiWindow();
   els.login.hidden = true;
   els.app.hidden = false;
   els.chipModel.textContent = me.model.replace(/^./, (c) => c.toUpperCase());
