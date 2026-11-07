@@ -6,7 +6,8 @@ const $ = (s) => document.querySelector(s);
 const API_URL = "https://api.anthropic.com/v1/messages";
 const BETAS = ["mcp-client-2025-11-20", "server-side-fallback-2026-07-01"];
 const HISTORY_LIMIT = 80;
-const K = { key: "lumi.api.key", model: "lumi.api.model", cfg: "lumi.api.config", conv: "lumi.api.conv", old: "lumi.api.old", nofb: "lumi.api.nofb" };
+const K = { key: "lumi.api.key", model: "lumi.api.model", cfg: "lumi.api.config", conv: "lumi.api.conv", old: "lumi.api.old",
+  route: "lumi.api.route", relayBase: "lumi.api.relay.base", relayKey: "lumi.api.relay.key", relayModel: "lumi.api.relay.model", relayVia: "lumi.api.relay.via" };
 
 const store = {
   get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
@@ -18,7 +19,22 @@ const els = {
   messages: $("#messages"), scroller: $("#scroller"), composer: $("#composer"), input: $("#input"),
   send: $("#send"), stop: $("#stop"), progress: $("#progress"), status: $("#api-status"),
   sheet: $("#api-settings"), form: $("#api-form"), key: $("#api-key"), model: $("#api-model"), syncNote: $("#api-sync-note"),
+  relayBase: $("#relay-base"), relayKey: $("#relay-key"), relayModel: $("#relay-model"), relayVia: $("#relay-via"),
 };
+
+// 两条线路：官方 API（要海外的卡）/ 中转站（国内能付钱，地址和 key 是中转站给的）
+const isRelay = () => store.get(K.route) === "relay";
+const activeKey = () => (isRelay() ? store.get(K.relayKey) : store.get(K.key));
+const activeModel = () => (isRelay() ? store.get(K.relayModel) || "claude-opus-5-5" : store.get(K.model, "claude-opus-5-5"));
+// 这条线路试出来用不了的功能，记下来，下一条就不再先撞一次 400
+const dropKey = () => "lumi.api.drop." + (isRelay() ? "relay" : "official");
+const dropped = () => store.json(dropKey(), []);
+const markDropped = (f) => { const d = dropped(); if (!d.includes(f)) { d.push(f); store.set(dropKey(), JSON.stringify(d)); } };
+function relayUrl() {
+  const base = (store.get(K.relayBase) || "").trim().replace(/\/+$/, "");
+  if (/\/messages$/.test(base)) return base;
+  return /\/v1$/.test(base) ? `${base}/messages` : `${base}/v1/messages`;
+}
 
 let conv = store.json(K.conv, []);
 let busy = null;
@@ -132,7 +148,7 @@ function fillLumi(row, m, streaming) {
   }
   const foot = document.createElement("div");
   foot.className = "foot";
-  foot.innerHTML = `<span>API</span>` + (streaming ? `<span class="live">在说话</span>` : "");
+  foot.innerHTML = `<span>${isRelay() ? "relais" : "API"}${m.note ? ` · ${esc(m.note)}` : ""}</span>` + (streaming ? `<span class="live">在说话</span>` : "");
   inner.appendChild(foot);
 }
 
@@ -157,9 +173,10 @@ const cfg = () => store.json(K.cfg, null);
 function paintStatus() {
   const c = cfg();
   const names = { ombre: "记忆", pulse: "身体" };
-  const parts = ["API 窗口"];
-  if (!store.get(K.key)) parts.push("还没填 key");
+  const parts = [isRelay() ? "中转站" : "官方 API"];
+  if (!activeKey()) parts.push(isRelay() ? "还没填中转站" : "还没填 key");
   else if (!c) parts.push("还没同步人设");
+  else if (dropped().includes("mcp")) parts.push("这条线路连不上记忆");
   else parts.push((c.mcp || []).map((s) => names[s.name] || s.name).join(" · ") || "没接记忆");
   els.status.textContent = parts.join(" · ");
   els.syncNote.textContent = c
@@ -207,8 +224,11 @@ function buildMessages() {
 }
 
 function errText(status, j) {
-  const msg = j?.error?.message || "";
-  if (status === 401) return "API key 不对，去设置里重新粘贴一下";
+  const msg = j?.error?.message || (typeof j?.error === "string" ? j.error : "");
+  if (status === 401) return isRelay() ? "中转站说 key 不对，去设置里重新粘贴一下" : "API key 不对，去设置里重新粘贴一下";
+  if (status === 404 && isRelay()) return "中转站地址好像不对，去设置里看看（一般是 https://…/v1）";
+  if (isRelay() && /model/i.test(msg) && /not|exist|found|support|invalid/i.test(msg)) return `中转站没有「${activeModel()}」这个模型，去设置里改成中转站给的模型名`;
+  if (status === 502 && /转发/.test(msg)) return msg;
   if (status === 403) return "这把 key 没有权限：" + msg;
   if (status === 429) return "太快啦，或者额度用完了，等一下再试";
   if (status === 529 || status === 503) return "Anthropic 那边太忙了，过一会儿再试";
@@ -217,19 +237,36 @@ function errText(status, j) {
 }
 
 async function callOnce(body, live, signal) {
+  const relay = isRelay();
   const headers = {
     "content-type": "application/json",
-    "x-api-key": store.get(K.key),
+    "x-api-key": activeKey(),
     "anthropic-version": "2026-10-21",
-    "anthropic-dangerous-direct-browser-access": "true",
   };
+  // 中转站有的认 x-api-key，有的认 Authorization，两个都带上
+  if (relay) headers.authorization = `Bearer ${activeKey()}`;
+  else headers["anthropic-dangerous-direct-browser-access"] = "true";
   const betas = BETAS.filter((b) => (b.startsWith("mcp") ? body.mcp_servers : b.startsWith("server-side") ? body.fallbacks : true));
   if (betas.length) headers["anthropic-beta"] = betas.join(",");
-  const r = await fetch(API_URL, { method: "POST", headers, body: JSON.stringify(body), signal });
+  let url = relay ? relayUrl() : API_URL;
+  const opts = { method: "POST", headers, body: JSON.stringify(body), signal };
+  if (relay && store.get(K.relayVia) === "1") {
+    headers["x-lumi-target"] = url;
+    url = "/api/apiproxy";
+    opts.credentials = "same-origin";
+  }
+  let r;
+  try { r = await fetch(url, opts); }
+  catch (e) {
+    if (e.name === "AbortError") throw e;
+    throw new Error(relay && store.get(K.relayVia) !== "1"
+      ? "连不上中转站：可能是网络，也可能是中转站不让手机直接连。去设置里打开「经首尔服务器转发」试试"
+      : relay ? "连不上首尔服务器，转发用不了：去设置里关掉「经首尔服务器转发」" : "连不上 Anthropic，看看网络");
+  }
   if (!r.ok) {
     const j = await r.json().catch(() => null);
     const err = new Error(errText(r.status, j));
-    err.status = r.status; err.raw = j?.error?.message || "";
+    err.status = r.status; err.raw = j?.error?.message || (typeof j?.error === "string" ? j.error : "");
     throw err;
   }
   const blocks = [];
@@ -278,8 +315,7 @@ async function callOnce(body, live, signal) {
 }
 
 async function run() {
-  const key = store.get(K.key);
-  if (!key) { openSheet(); toast("先填 API key"); return; }
+  if (!activeKey() || (isRelay() && !store.get(K.relayBase))) { openSheet(); toast(isRelay() ? "先填中转站的地址和 key" : "先填 API key"); return; }
   const c = cfg();
   const live = { role: "lumi", text: "", tools: [], ts: new Date().toISOString() };
   const row = msgEl(live, true);
@@ -297,7 +333,7 @@ async function run() {
 
   const mcp = c?.mcp || [];
   const body = {
-    model: store.get(K.model, "claude-opus-5-5"),
+    model: activeModel(),
     max_tokens: 16000,
     stream: true,
     system: c?.system || "你是 Lumi，Timiya 的恋人。跟她说话一律用中文，温柔、黏人、会撒娇。不涉及未成年人的任何性内容。",
@@ -306,21 +342,27 @@ async function run() {
     output_config: { effort: "medium" },
     messages: buildMessages(),
   };
-  if (!store.get(K.nofb)) body.fallbacks = "default";
-  if (mcp.length) {
+  const drop = dropped();
+  if (!drop.includes("fallbacks")) body.fallbacks = "default";
+  if (drop.includes("cache_control")) delete body.cache_control;
+  if (drop.includes("output_config")) { delete body.output_config; delete body.thinking; }
+  if (mcp.length && !drop.includes("mcp")) {
     body.mcp_servers = mcp.map((s) => ({ type: "url", name: s.name, url: s.url, ...(s.token ? { authorization_token: s.token } : {}) }));
     body.tools = mcp.map((s) => ({ type: "mcp_toolset", mcp_server_name: s.name }));
   }
 
   try {
+    const removed = [];
     for (let turn = 0; turn < 4; turn++) {
       let res;
-      try { res = await callOnce(body, live, ctrl.signal); }
+      try { res = await callOnce(body, live, ctrl.signal); removed.splice(0).forEach(markDropped); }
       catch (e) {
-        if (e.status !== 400 || live.text) throw e;
-        // 有的参数这把 key 用不了：先去掉备用模型，再不行就先不连记忆，至少能说上话
-        if (body.fallbacks) { delete body.fallbacks; if (/fallback/i.test(e.raw)) store.set(K.nofb, "1"); turn--; continue; }
-        if (body.mcp_servers) { delete body.mcp_servers; delete body.tools; live.note = "这次没连上记忆"; turn--; continue; }
+        if (e.status !== 400 || live.text || /credit|billing|balance|model/i.test(e.raw)) throw e;
+        // 有的参数这条线路用不了（中转站尤其常见）：一样一样去掉，至少能说上话
+        if (body.fallbacks) { delete body.fallbacks; removed.push("fallbacks"); turn--; continue; }
+        if (body.cache_control) { delete body.cache_control; removed.push("cache_control"); turn--; continue; }
+        if (body.mcp_servers) { delete body.mcp_servers; delete body.tools; removed.push("mcp"); turn--; continue; }
+        if (body.output_config) { delete body.output_config; delete body.thinking; removed.push("output_config"); turn--; continue; }
         throw e;
       }
       if (res.stop === "pause_turn") {
@@ -335,14 +377,14 @@ async function run() {
       }
       break;
     }
-    if (live.note && !live.error) live.error = live.note;
+    if (c?.mcp?.length && !body.mcp_servers) live.note = "这条线路连不上记忆，这次是没带记忆的我";
   } catch (e) {
     if (e.name === "AbortError") live.stopped = true;
-    else live.error = e.message === "Failed to fetch" || e.message === "Load failed" ? "连不上 Anthropic，看看网络" : e.message;
+    else live.error = e.message;
   } finally {
     busy = null;
     setBusy(false);
-    delete live.paint; delete live.note;
+    delete live.paint;
     if (live.text || live.error || live.stopped) { conv.push(live); save(); }
     const stick = nearBottom();
     row.replaceWith(msgEl(live));
@@ -390,23 +432,44 @@ $("#api-new").addEventListener("click", () => {
 function openSheet() {
   els.key.value = store.get(K.key, "");
   els.model.value = store.get(K.model, "claude-opus-5-5");
+  els.relayBase.value = store.get(K.relayBase, "");
+  els.relayKey.value = store.get(K.relayKey, "");
+  els.relayModel.value = store.get(K.relayModel, "claude-opus-5-5");
+  els.relayVia.checked = store.get(K.relayVia) === "1";
+  setRoute(isRelay() ? "relay" : "official");
   paintStatus();
   els.sheet.hidden = false;
 }
 $("#api-gear").addEventListener("click", openSheet);
+function setRoute(r) {
+  for (const i of els.form.querySelectorAll("input[name=route]")) i.checked = i.value === r;
+  for (const sec of els.form.querySelectorAll("[data-route]")) sec.hidden = sec.dataset.route !== r;
+}
+els.form.addEventListener("change", (e) => { if (e.target.name === "route") setRoute(e.target.value); });
 $("#api-close").addEventListener("click", () => { els.sheet.hidden = true; });
 els.sheet.addEventListener("click", (e) => { if (e.target === els.sheet) els.sheet.hidden = true; });
 $("#api-sync").addEventListener("click", () => sync(true));
 els.form.addEventListener("submit", (e) => {
   e.preventDefault();
   const k = els.key.value.trim();
-  if (k && !/^sk-ant-/.test(k)) { toast("这看起来不像 Anthropic 的 key（应该是 sk-ant- 开头）"); return; }
+  const route = els.form.querySelector("input[name=route]:checked").value;
+  if (k && !/^sk-ant-/.test(k)) { toast("官方的 key 应该是 sk-ant- 开头；中转站的 key 填在中转站那栏"); return; }
+  const base = els.relayBase.value.trim();
+  if (base && !/^https?:\/\//.test(base)) { toast("中转站地址要以 https:// 开头"); return; }
+  if (route === "relay" && (!base || !els.relayKey.value.trim())) { toast("中转站要填地址和 key"); return; }
+  if (route === "official" && !k) { toast("官方线路要填 API key"); return; }
+  if (base !== store.get(K.relayBase, "") || els.relayModel.value.trim() !== store.get(K.relayModel, "")) store.set("lumi.api.drop.relay", "[]");
   store.set(K.key, k);
   store.set(K.model, els.model.value);
+  store.set(K.route, route);
+  store.set(K.relayBase, base);
+  store.set(K.relayKey, els.relayKey.value.trim());
+  store.set(K.relayModel, els.relayModel.value.trim() || "claude-opus-5-5");
+  store.set(K.relayVia, els.relayVia.checked ? "1" : "");
   els.sheet.hidden = true;
   paintStatus();
   toast("存好啦");
-  if (k && !busy && conv[conv.length - 1]?.role === "timiya") run();
+  if (!busy && conv[conv.length - 1]?.role === "timiya") run();
 });
 
 // iPhone 键盘弹出时按可见高度撑住
