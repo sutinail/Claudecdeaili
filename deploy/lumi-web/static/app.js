@@ -1464,7 +1464,10 @@ setEls.form.addEventListener("submit", async (e) => {
 
 // API 窗口用的人设和记忆连接信息：服务器好着的时候顺手存一份在手机里
 async function syncApiWindow() {
-  try { localStorage.setItem("lumi.api.config", JSON.stringify(await api("/api/apiwin"))); } catch {}
+  let cfg;
+  try { cfg = await api("/api/apiwin"); localStorage.setItem("lumi.api.config", JSON.stringify(cfg)); } catch { return; }
+  // 记忆副本也顺手更新：离线时记的补写回 OB，副本旧了就重新存一份
+  window.LumiMem?.sync(cfg).catch(() => {});
 }
 
 // ── 登录 / 启动 ──
