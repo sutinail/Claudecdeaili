@@ -697,3 +697,10 @@ html[data-zh="wenkai"] body, html[data-zh="xiaowei"] body, html[data-zh="notoser
 .api-entry span { font-family: var(--serif); font-style: italic; color: var(--faint); font-size: 14px; }
 .login-api { display: block; margin-top: 14px; text-align: center; font-size: 13px; color: var(--muted); }
 .lumi .inner > .btn-link { align-self: flex-start; }
+.api-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 16px; border: 1px solid var(--hair); }
+.api-seg label { position: relative; }
+.api-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.api-seg span { display: block; text-align: center; padding: 9px 0; border-radius: 12px; font-size: 14.5px; color: var(--muted); letter-spacing: .08em; transition: background .2s, color .2s; }
+.api-seg input:checked + span { background: var(--glass-strong); color: var(--ink); box-shadow: 0 4px 12px -6px rgba(20,20,40,.3); }
+.settings-sec[hidden] { display: none; }
+.settings-note code { font-size: 12px; overflow-wrap: anywhere; }

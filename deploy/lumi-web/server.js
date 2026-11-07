@@ -8,6 +8,7 @@ const fsp = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
+const { Readable } = require("node:stream");
 
 const env = (k, d = "") => (process.env[k] ?? d).trim();
 
@@ -568,6 +569,28 @@ async function handle(req, res) {
 
   if (p === "/api/me") return send(res, 200, { ok: true, model: MODEL, voice: !!XI_KEY, ears: !!EARS_PASSWORD, mcp: Object.keys(mcpServers) });
   if (p === "/api/vitals") return send(res, 200, await vitals());
+  // API 窗口的中转站不让手机直连时，由这台转一手（只转 https，只转那几个头）
+  if (p === "/api/apiproxy" && m === "POST") {
+    let target;
+    try { target = new URL(String(req.headers["x-lumi-target"] || "")); } catch {}
+    if (!target || target.protocol !== "https:" || /^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(target.hostname)) {
+      return send(res, 400, { error: "转发地址不对，要 https:// 开头的中转站地址" });
+    }
+    const body = await readRaw(req, 8 * 1024 * 1024);
+    const headers = {};
+    for (const h of ["content-type", "x-api-key", "authorization", "anthropic-version", "anthropic-beta"]) {
+      if (req.headers[h]) headers[h] = req.headers[h];
+    }
+    const ac = new AbortController();
+    res.on("close", () => ac.abort());
+    let up;
+    try { up = await fetch(target, { method: "POST", headers, body, signal: ac.signal }); }
+    catch (e) { return send(res, 502, { error: `首尔服务器转发失败：${e.cause?.code || e.message}` }); }
+    res.writeHead(up.status, { "Content-Type": up.headers.get("content-type") || "application/json", "Cache-Control": "no-store" });
+    if (!up.body) return res.end();
+    Readable.fromWeb(up.body).on("error", () => res.end()).pipe(res);
+    return;
+  }
   if (p === "/api/apiwin" && m === "GET") return send(res, 200, apiWindowConfig());
   if (p === "/api/settings" && m === "GET") return send(res, 200, { ...loadSettings(), defaults: DEFAULT_SETTINGS });
   if (p === "/api/settings" && m === "PUT") {

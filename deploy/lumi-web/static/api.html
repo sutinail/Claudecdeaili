@@ -12,7 +12,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon-192.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
-  <link rel="stylesheet" href="/style.css?v=23">
+  <link rel="stylesheet" href="/style.css?v=24">
 </head>
 <body>
   <div id="app" class="app api-app">
@@ -54,16 +54,31 @@
       <form id="api-form" class="settings-card">
         <div class="settings-head"><span class="script">la clé</span><button id="api-close" class="btn-link small" type="button">关闭</button></div>
         <section class="settings-sec">
-          <div class="settings-k">API Key <span>钥匙</span></div>
-          <p class="settings-note">在 Anthropic 控制台建一把 key，复制过来粘贴在这里。它只存在这台手机上，不会发给任何人，也<b>不要</b>发到聊天里。建议在控制台给它设一个每月花费上限。</p>
-          <input id="api-key" class="api-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+          <div class="settings-k">route <span>线路</span></div>
+          <div class="api-seg" role="radiogroup">
+            <label><input type="radio" name="route" value="official"><span>官方 API</span></label>
+            <label><input type="radio" name="route" value="relay"><span>中转站</span></label>
+          </div>
         </section>
-        <section class="settings-sec">
+        <section class="settings-sec" data-route="official">
+          <div class="settings-k">API Key <span>官方钥匙</span></div>
+          <p class="settings-note">在 Anthropic 控制台建一把 key（要海外的卡付钱），复制过来粘贴在这里。它只存在这台手机上，<b>不要</b>发到聊天里。建议在控制台给它设一个每月花费上限。</p>
+          <input id="api-key" class="api-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
           <div class="settings-k">modèle <span>模型</span></div>
           <select id="api-model" class="api-input">
             <option value="claude-opus-5-5">Opus 5.5（默认，最像我）</option>
             <option value="claude-sonnet-5-5">Sonnet 5.5（便宜一半）</option>
           </select>
+        </section>
+        <section class="settings-sec" data-route="relay" hidden>
+          <div class="settings-k">relais <span>中转站</span></div>
+          <p class="settings-note">中转站后台会给你一个地址和一把 key，照抄进来。地址一般长这样：<code>https://xxx.com/v1</code>。要选支持 Claude 原生格式（/v1/messages）的中转站。key 只存在这台手机上，<b>不要</b>发到聊天里。</p>
+          <input id="relay-base" class="api-input" type="url" autocomplete="off" spellcheck="false" placeholder="https://中转站地址/v1">
+          <input id="relay-key" class="api-input" type="password" autocomplete="off" spellcheck="false" placeholder="中转站给的 key（sk-…）">
+          <div class="settings-k">modèle <span>模型名，照中转站写的填</span></div>
+          <input id="relay-model" class="api-input" type="text" autocomplete="off" spellcheck="false" placeholder="claude-opus-5-5">
+          <label class="settings-switch"><input id="relay-via" type="checkbox"><i></i><span>经首尔服务器转发</span></label>
+          <p class="settings-note">中转站不让手机直连（报「连不上中转站」）时打开。打开以后要首尔服务器在线才能用。</p>
         </section>
         <section class="settings-sec">
           <div class="settings-k">mémoire <span>人设和记忆</span></div>
@@ -74,6 +89,6 @@
       </form>
     </div>
   </div>
-  <script src="/api.js?v=1"></script>
+  <script src="/api.js?v=2"></script>
 </body>
 </html>

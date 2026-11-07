@@ -1,6 +1,6 @@
 // 只缓存页面外壳，接口一律走网络
-const CACHE = "lumi-shell-v24";
-const SHELL = ["/", "/style.css?v=23", "/app.js?v=23", "/api.html", "/api.js?v=1", "/quill.png?v=1", "/manifest.webmanifest", "/icon-192.png", "/apple-touch-icon.png", "/bg/ange.jpg", "/fonts/pinyon-script-latin-400-normal.woff2", "/fonts/cormorant-garamond-latin-300-italic.woff2", "/fonts/cormorant-garamond-latin-400-normal.woff2"];
+const CACHE = "lumi-shell-v25";
+const SHELL = ["/", "/style.css?v=24", "/app.js?v=23", "/api.html", "/api.js?v=2", "/quill.png?v=1", "/manifest.webmanifest", "/icon-192.png", "/apple-touch-icon.png", "/bg/ange.jpg", "/fonts/pinyon-script-latin-400-normal.woff2", "/fonts/cormorant-garamond-latin-300-italic.woff2", "/fonts/cormorant-garamond-latin-400-normal.woff2"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
