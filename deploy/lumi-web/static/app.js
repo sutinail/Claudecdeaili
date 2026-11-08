@@ -92,7 +92,12 @@ async function api(path, opts = {}) {
   });
   if (r.status === 401 && path !== "/api/login") { showLogin(); throw new Error("要先登录"); }
   const j = r.status === 204 ? {} : await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || `出错了 (${r.status})`);
+  if (!r.ok) {
+    if (j.error) throw new Error(j.error);
+    // 没带我们自己的错误说明，是 Cloudflare 替服务器回的：首尔那台没回话
+    if (r.status >= 500) throw new Error(`首尔服务器这一下没回话（${r.status}），可能刚好在重启，等半分钟再试`);
+    throw new Error(`出错了 (${r.status})`);
+  }
   return j;
 }
 
